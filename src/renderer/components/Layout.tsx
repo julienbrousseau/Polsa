@@ -46,7 +46,7 @@ export default function Layout({ children }: LayoutProps) {
       <aside className={`glass flex shrink-0 flex-col border-r border-[var(--color-border-glass)] transition-all duration-300 ${collapsed ? 'w-14' : 'w-64'}`}>
         {/* App title / drag region */}
         <div
-          className="flex h-14 items-center justify-between px-3"
+          className="flex h-14 items-center justify-between pl-[74px] pr-3"
           style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
         >
           {!collapsed && (
