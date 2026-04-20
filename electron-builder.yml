@@ -3,9 +3,21 @@ productName: Polsa
 directories:
   output: release
   buildResources: build
+electronLanguages:
+  - en
 files:
   - dist/**/*
   - package.json
+  - "!**/better-sqlite3/build/Release/obj/**"
+  - "!**/better-sqlite3/build/deps/**"
+  - "!**/better-sqlite3/build/node_gyp_bins/**"
+  - "!**/better-sqlite3/deps/**"
+  - "!**/better-sqlite3/src/**"
+  - "!**/better-sqlite3/build/Release/test_extension.node"
+  - "!**/*.{map,md,txt,ts}"
+  - "!**/node_modules/.cache/**"
+asarUnpack:
+  - "node_modules/better-sqlite3/build/Release/better_sqlite3.node"
 mac:
   category: public.app-category.finance
   icon: build/icon.icns

@@ -30,7 +30,7 @@ export interface Transaction {
   accountId: number;
   date: string;             // YYYY-MM-DD
   amount: number;           // cents
-  categoryId: number | null;
+  categoryId?: number | null;   // direct category (when no subcategory)
   subcategoryId: number | null;
   description: string;
   reconciled: boolean;
@@ -103,6 +103,7 @@ export type QifDateFormat = 'MM/DD/YYYY' | 'DD/MM/YYYY';
 export interface QifImportInput {
   accountId: number;
   filePath: string;
+  dateFormat: QifDateFormat;
 }
 
 export interface QifImportResult {
@@ -159,10 +160,6 @@ export interface UpdateRecurringInput {
 
 // Reconciliation
 
-export interface ReconcileBalanceResult {
-  reconciledBalance: number;    // cents
-}
-
 export interface ReconcileUnreconciledInput {
   accountId: number;
   offset: number;
@@ -173,19 +170,28 @@ export interface ReconcileConfirmInput {
   transactionIds: number[];
 }
 
+export interface ReconcileBalanceResult {
+  reconciledBalance: number;
+}
+
 export interface ReconcileConfirmResult {
-  reconciled: number;           // count of transactions marked
+  reconciled: number;
 }
 
 // Budgets
 
-export interface BudgetOverview {
+export interface BudgetOverviewInput {
   year: number;
   month: number;
-  totalAllocated: number;
-  totalSpent: number;
-  totalAvailable: number;
-  categories: BudgetCategoryRow[];
+}
+
+export interface BudgetSubcategoryRow {
+  subcategoryId: number;
+  subcategoryName: string;
+  allocated: number;
+  rollover: number;
+  spent: number;
+  available: number;
 }
 
 export interface BudgetCategoryRow {
@@ -198,13 +204,13 @@ export interface BudgetCategoryRow {
   subcategories: BudgetSubcategoryRow[];
 }
 
-export interface BudgetSubcategoryRow {
-  subcategoryId: number;
-  subcategoryName: string;
-  allocated: number;
-  rollover: number;
-  spent: number;
-  available: number;
+export interface BudgetOverview {
+  year: number;
+  month: number;
+  totalAllocated: number;
+  totalSpent: number;
+  totalAvailable: number;
+  categories: BudgetCategoryRow[];
 }
 
 export interface BudgetAllocation {
@@ -216,23 +222,23 @@ export interface BudgetAllocation {
 }
 
 export interface SetAllocationInput {
-  subcategoryId: number | null;
   categoryId: number;
+  subcategoryId: number | null;
   year: number;
   month: number;
   amount: number;
-  applyToFutureMonths: boolean;
+  applyToFutureMonths?: boolean;
 }
 
 export interface SetAllocationsInput {
   year: number;
   month: number;
-  allocations: {
-    subcategoryId: number | null;
+  allocations: Array<{
     categoryId: number;
+    subcategoryId: number | null;
     amount: number;
-  }[];
-  applyToFutureMonths: boolean;
+  }>;
+  applyToFutureMonths?: boolean;
 }
 
 export interface BudgetDefault {
@@ -240,9 +246,4 @@ export interface BudgetDefault {
   categoryId: number;
   amount: number;
   effectiveFrom: string;
-}
-
-export interface BudgetOverviewInput {
-  year: number;
-  month: number;
 }

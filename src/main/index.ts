@@ -98,20 +98,24 @@ app.whenReady().then(() => {
 
   createSplashWindow();
 
-  initDatabase();
-  registerAccountHandlers();
-  registerCategoryHandlers();
-  registerTransactionHandlers();
-  registerQifHandlers();
-  registerRecurringHandlers();
-  registerReconcileHandlers();
-  registerBudgetHandlers();
-  registerSyncHandlers();
+  try {
+    initDatabase();
+    registerAccountHandlers();
+    registerCategoryHandlers();
+    registerTransactionHandlers();
+    registerQifHandlers();
+    registerRecurringHandlers();
+    registerReconcileHandlers();
+    registerBudgetHandlers();
+    registerSyncHandlers();
 
-  // Apply overdue recurring payments before showing UI
-  const { applied } = applyOverdue();
-  if (applied > 0) {
-    console.log(`Applied ${applied} overdue recurring payment(s)`);
+    // Apply overdue recurring payments before showing UI
+    const { applied } = applyOverdue();
+    if (applied > 0) {
+      console.log(`Applied ${applied} overdue recurring payment(s)`);
+    }
+  } catch (err) {
+    console.error('Startup error:', err);
   }
 
   createWindow();
