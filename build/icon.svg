@@ -1,0 +1,356 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Glow filters -->
+    <filter id="glow-xs" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-sm" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-md" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-lg" x="-200%" y="-200%" width="500%" height="500%">
+      <feGaussianBlur stdDeviation="20" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <!-- Background radial gradient -->
+    <radialGradient id="bg-grad" cx="50%" cy="42%" r="58%">
+      <stop offset="0%" stop-color="#0e1f36"/>
+      <stop offset="60%" stop-color="#070f1c"/>
+      <stop offset="100%" stop-color="#030710"/>
+    </radialGradient>
+
+    <!-- Face gradient -->
+    <radialGradient id="face-grad" cx="38%" cy="32%" r="65%">
+      <stop offset="0%" stop-color="#16273b"/>
+      <stop offset="100%" stop-color="#08121e"/>
+    </radialGradient>
+
+    <!-- Hat gradient -->
+    <linearGradient id="hat-grad" x1="0%" y1="0%" x2="10%" y2="100%">
+      <stop offset="0%" stop-color="#192840"/>
+      <stop offset="100%" stop-color="#0b1828"/>
+    </linearGradient>
+
+    <!-- Suit gradient -->
+    <linearGradient id="suit-grad" x1="10%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0%" stop-color="#101e2e"/>
+      <stop offset="100%" stop-color="#060e18"/>
+    </linearGradient>
+
+    <!-- Eye green gradient -->
+    <radialGradient id="eye-green" cx="30%" cy="28%" r="65%">
+      <stop offset="0%" stop-color="#00ff88"/>
+      <stop offset="50%" stop-color="#00cc66"/>
+      <stop offset="100%" stop-color="#007733"/>
+    </radialGradient>
+
+    <!-- Eye blue gradient -->
+    <radialGradient id="eye-blue" cx="30%" cy="28%" r="65%">
+      <stop offset="0%" stop-color="#44ddff"/>
+      <stop offset="50%" stop-color="#00aaee"/>
+      <stop offset="100%" stop-color="#005588"/>
+    </radialGradient>
+
+    <!-- Subtle circuit grid pattern -->
+    <pattern id="circuit-grid" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M 0 24 L 10 24 L 10 10 L 24 10" stroke="#00d4ff" stroke-width="0.6" fill="none" opacity="0.1"/>
+      <path d="M 48 24 L 38 24 L 38 38 L 24 38" stroke="#00d4ff" stroke-width="0.6" fill="none" opacity="0.1"/>
+      <circle cx="10" cy="10" r="1.8" fill="#00d4ff" opacity="0.18"/>
+      <circle cx="38" cy="38" r="1.8" fill="#00d4ff" opacity="0.18"/>
+    </pattern>
+
+    <!-- Clip to circle -->
+    <clipPath id="icon-clip">
+      <circle cx="256" cy="256" r="250"/>
+    </clipPath>
+  </defs>
+
+  <!-- ═══ BACKGROUND ═══ -->
+  <circle cx="256" cy="256" r="256" fill="#030710"/>
+  <circle cx="256" cy="256" r="256" fill="url(#bg-grad)"/>
+
+  <g clip-path="url(#icon-clip)">
+
+    <!-- Circuit grid texture -->
+    <rect x="0" y="0" width="512" height="512" fill="url(#circuit-grid)"/>
+
+    <!-- Subtle radial scan lines from center (atmosphere) -->
+    <circle cx="256" cy="256" r="230" fill="none" stroke="#00d4ff" stroke-width="0.4" opacity="0.06"/>
+    <circle cx="256" cy="256" r="180" fill="none" stroke="#00d4ff" stroke-width="0.4" opacity="0.05"/>
+    <circle cx="256" cy="256" r="120" fill="none" stroke="#00d4ff" stroke-width="0.4" opacity="0.04"/>
+
+    <!-- ═══ SUIT / BODY ═══ -->
+    <!-- Main jacket body shape -->
+    <path d="M 50 530 L 95 415 L 160 382 L 204 430 L 256 405 L 308 430 L 352 382 L 417 415 L 462 530 Z"
+          fill="url(#suit-grad)"/>
+
+    <!-- Left shoulder highlight -->
+    <path d="M 95 415 L 160 382" stroke="#00d4ff" stroke-width="1.5" opacity="0.3"/>
+    <!-- Right shoulder highlight -->
+    <path d="M 352 382 L 417 415" stroke="#00d4ff" stroke-width="1.5" opacity="0.3"/>
+
+    <!-- Jacket lapels (V-shape) -->
+    <path d="M 204 430 L 256 480 L 308 430 L 292 404 L 256 448 L 220 404 Z"
+          fill="#0b1928" stroke="#00d4ff" stroke-width="1.2" opacity="0.85"/>
+
+    <!-- White shirt/placket -->
+    <polygon points="242,406 256,444 270,406 262,396 256,404 250,396"
+             fill="#ddeeff" opacity="0.88"/>
+
+    <!-- Shirt collar detail -->
+    <line x1="256" y1="444" x2="244" y2="406" stroke="#c8dff4" stroke-width="0.8" opacity="0.5"/>
+    <line x1="256" y1="444" x2="268" y2="406" stroke="#c8dff4" stroke-width="0.8" opacity="0.5"/>
+
+    <!-- ═══ BOW TIE ═══ -->
+    <!-- Left wing -->
+    <path d="M 216 404 L 245 390 L 256 404 L 245 418 Z" fill="#00ff88" opacity="0.95"/>
+    <!-- Right wing -->
+    <path d="M 296 404 L 267 390 L 256 404 L 267 418 Z" fill="#00ff88" opacity="0.95"/>
+    <!-- Knot center -->
+    <ellipse cx="256" cy="404" rx="13" ry="11" fill="#00cc66" filter="url(#glow-sm)"/>
+    <ellipse cx="256" cy="404" rx="7" ry="6" fill="#00ff88" opacity="0.95"/>
+    <!-- Bow tie highlight -->
+    <ellipse cx="233" cy="396" rx="7" ry="4" fill="#88ffcc" opacity="0.3" transform="rotate(-15,233,396)"/>
+
+    <!-- Circuit traces on jacket -->
+    <path d="M 172 402 L 172 428 L 192 428 L 192 452"
+          stroke="#00d4ff" stroke-width="1.5" fill="none" opacity="0.4" filter="url(#glow-xs)"/>
+    <path d="M 340 402 L 340 428 L 320 428 L 320 452"
+          stroke="#00d4ff" stroke-width="1.5" fill="none" opacity="0.4" filter="url(#glow-xs)"/>
+    <!-- Circuit nodes -->
+    <circle cx="192" cy="452" r="3" fill="#00d4ff" opacity="0.65" filter="url(#glow-xs)"/>
+    <circle cx="320" cy="452" r="3" fill="#00d4ff" opacity="0.65" filter="url(#glow-xs)"/>
+    <!-- More suit circuit traces -->
+    <path d="M 150 448 L 176 448" stroke="#7b2fff" stroke-width="1" fill="none" opacity="0.3"/>
+    <path d="M 362 448 L 336 448" stroke="#7b2fff" stroke-width="1" fill="none" opacity="0.3"/>
+    <circle cx="150" cy="448" r="2.5" fill="#7b2fff" opacity="0.5"/>
+    <circle cx="362" cy="448" r="2.5" fill="#7b2fff" opacity="0.5"/>
+
+    <!-- ═══ NECK ═══ -->
+    <rect x="232" y="400" width="48" height="32" rx="4"
+          fill="#0c1c2c" stroke="#00d4ff" stroke-width="1.2" opacity="0.8"/>
+    <!-- Neck bolts (robot) -->
+    <circle cx="241" cy="413" r="5.5" fill="#142030" stroke="#00d4ff" stroke-width="1.5" opacity="0.85"/>
+    <circle cx="271" cy="413" r="5.5" fill="#142030" stroke="#00d4ff" stroke-width="1.5" opacity="0.85"/>
+    <!-- Neck bolt center dots -->
+    <circle cx="241" cy="413" r="2" fill="#00d4ff" opacity="0.5" filter="url(#glow-xs)"/>
+    <circle cx="271" cy="413" r="2" fill="#00d4ff" opacity="0.5" filter="url(#glow-xs)"/>
+
+    <!-- ═══ HEAD ═══ -->
+    <circle cx="256" cy="294" r="116" fill="url(#face-grad)"/>
+    <!-- Head border glow -->
+    <circle cx="256" cy="294" r="116" fill="none" stroke="#00d4ff" stroke-width="2.2" opacity="0.7" filter="url(#glow-xs)"/>
+    <!-- Head specular highlight -->
+    <ellipse cx="214" cy="228" rx="52" ry="34" fill="white" opacity="0.025" transform="rotate(-10,214,228)"/>
+
+    <!-- Head side circuit panels -->
+    <path d="M 144 280 L 160 280 L 160 260 L 178 260"
+          stroke="#00d4ff" stroke-width="1.5" fill="none" opacity="0.38" filter="url(#glow-xs)"/>
+    <path d="M 368 280 L 352 280 L 352 260 L 334 260"
+          stroke="#00d4ff" stroke-width="1.5" fill="none" opacity="0.38" filter="url(#glow-xs)"/>
+    <!-- Circuit node dots on head -->
+    <circle cx="160" cy="260" r="2.5" fill="#00d4ff" opacity="0.55"/>
+    <circle cx="352" cy="260" r="2.5" fill="#00d4ff" opacity="0.55"/>
+
+    <!-- Ear vents (robot) -->
+    <!-- Left vent -->
+    <rect x="133" y="265" width="14" height="34" rx="3"
+          fill="#0a1828" stroke="#00d4ff" stroke-width="1.2" opacity="0.75"/>
+    <line x1="134" y1="271" x2="146" y2="271" stroke="#00d4ff" stroke-width="1" opacity="0.55"/>
+    <line x1="134" y1="277" x2="146" y2="277" stroke="#00d4ff" stroke-width="1" opacity="0.55"/>
+    <line x1="134" y1="283" x2="146" y2="283" stroke="#00d4ff" stroke-width="1" opacity="0.55"/>
+    <line x1="134" y1="289" x2="146" y2="289" stroke="#00d4ff" stroke-width="1" opacity="0.55"/>
+    <!-- Right vent -->
+    <rect x="365" y="265" width="14" height="34" rx="3"
+          fill="#0a1828" stroke="#00d4ff" stroke-width="1.2" opacity="0.75"/>
+    <line x1="366" y1="271" x2="378" y2="271" stroke="#00d4ff" stroke-width="1" opacity="0.55"/>
+    <line x1="366" y1="277" x2="378" y2="277" stroke="#00d4ff" stroke-width="1" opacity="0.55"/>
+    <line x1="366" y1="283" x2="378" y2="283" stroke="#00d4ff" stroke-width="1" opacity="0.55"/>
+    <line x1="366" y1="289" x2="378" y2="289" stroke="#00d4ff" stroke-width="1" opacity="0.55"/>
+
+    <!-- ═══ LEFT EYE — green scanning ═══ -->
+    <!-- Eye socket -->
+    <circle cx="208" cy="282" r="37" fill="#001a0e" stroke="#00bb55" stroke-width="2" opacity="0.95"/>
+    <circle cx="208" cy="282" r="37" fill="none" stroke="#00ff88" stroke-width="2"
+            filter="url(#glow-sm)" opacity="0.55"/>
+    <!-- Iris -->
+    <circle cx="208" cy="282" r="27" fill="url(#eye-green)" opacity="0.92"/>
+    <!-- Pupil -->
+    <circle cx="208" cy="282" r="13" fill="#001a08"/>
+    <!-- Center LED glow -->
+    <circle cx="208" cy="282" r="7" fill="#00ff88" filter="url(#glow-md)" opacity="0.92"/>
+    <!-- Scan rings -->
+    <circle cx="208" cy="282" r="20" fill="none" stroke="#00ff88" stroke-width="0.9" opacity="0.32"/>
+    <circle cx="208" cy="282" r="32" fill="none" stroke="#00ff88" stroke-width="0.6" opacity="0.2"/>
+    <!-- Specular highlight -->
+    <ellipse cx="197" cy="271" rx="8" ry="5.5" fill="white" opacity="0.42" transform="rotate(-18,197,271)"/>
+
+    <!-- ═══ RIGHT EYE — blue with gold monocle ═══ -->
+    <!-- Eye socket -->
+    <circle cx="304" cy="282" r="37" fill="#000d20" stroke="#0099cc" stroke-width="2" opacity="0.95"/>
+    <circle cx="304" cy="282" r="37" fill="none" stroke="#00d4ff" stroke-width="2"
+            filter="url(#glow-sm)" opacity="0.55"/>
+    <!-- Iris -->
+    <circle cx="304" cy="282" r="27" fill="url(#eye-blue)" opacity="0.92"/>
+    <!-- Pupil -->
+    <circle cx="304" cy="282" r="13" fill="#001020"/>
+    <!-- Center LED glow -->
+    <circle cx="304" cy="282" r="7" fill="#44ddff" filter="url(#glow-md)" opacity="0.92"/>
+    <!-- Specular highlight -->
+    <ellipse cx="293" cy="271" rx="8" ry="5.5" fill="white" opacity="0.42" transform="rotate(-18,293,271)"/>
+
+    <!-- ═══ MONOCLE (around right eye) ═══ -->
+    <!-- Outer gold ring -->
+    <circle cx="308" cy="286" r="49" fill="none" stroke="#ffd700" stroke-width="3.5"
+            opacity="0.95" filter="url(#glow-xs)"/>
+    <!-- Inner gold ring (thinner, brighter) -->
+    <circle cx="308" cy="286" r="49" fill="none" stroke="#ffe866" stroke-width="1" opacity="0.45"/>
+    <!-- HUD crosshair / targeting reticle -->
+    <line x1="308" y1="241" x2="308" y2="256" stroke="#ffd700" stroke-width="1.5" opacity="0.55"/>
+    <line x1="308" y1="316" x2="308" y2="331" stroke="#ffd700" stroke-width="1.5" opacity="0.55"/>
+    <line x1="263" y1="286" x2="278" y2="286" stroke="#ffd700" stroke-width="1.5" opacity="0.55"/>
+    <line x1="338" y1="286" x2="353" y2="286" stroke="#ffd700" stroke-width="1.5" opacity="0.55"/>
+    <!-- Diagonal tick marks on monocle -->
+    <line x1="276" y1="253" x2="284" y2="261" stroke="#ffd700" stroke-width="1" opacity="0.3"/>
+    <line x1="340" y1="253" x2="332" y2="261" stroke="#ffd700" stroke-width="1" opacity="0.3"/>
+    <!-- Monocle chain -->
+    <path d="M 351 308 Q 372 332 370 358 Q 368 380 356 396"
+          stroke="#ffd700" stroke-width="2.8" fill="none" opacity="0.78" filter="url(#glow-xs)"/>
+    <!-- Chain link dots -->
+    <circle cx="356" cy="314" r="2.8" fill="#ffd700" opacity="0.65"/>
+    <circle cx="364" cy="333" r="2.8" fill="#ffd700" opacity="0.65"/>
+    <circle cx="368" cy="353" r="2.8" fill="#ffd700" opacity="0.65"/>
+    <circle cx="361" cy="374" r="2.8" fill="#ffd700" opacity="0.65"/>
+
+    <!-- ═══ NOSE (sensor module) ═══ -->
+    <rect x="248" y="322" width="16" height="20" rx="4"
+          fill="#0c1e2e" stroke="#00d4ff" stroke-width="1" opacity="0.72"/>
+    <!-- Nose sensor LED -->
+    <circle cx="256" cy="336" r="4.5" fill="#00d4ff" opacity="0.6" filter="url(#glow-xs)"/>
+
+    <!-- ═══ MOUTH (LED segment display smile) ═══ -->
+    <!-- 8 glowing rectangles forming a curved smile -->
+    <rect x="187" y="358" width="13" height="8" rx="2.5" fill="#00d4ff" filter="url(#glow-xs)" opacity="0.88"/>
+    <rect x="205" y="366" width="13" height="8" rx="2.5" fill="#00d4ff" filter="url(#glow-xs)" opacity="0.9"/>
+    <rect x="223" y="371" width="13" height="8" rx="2.5" fill="#00d4ff" filter="url(#glow-xs)" opacity="0.92"/>
+    <rect x="241" y="374" width="14" height="8" rx="2.5" fill="#00d4ff" filter="url(#glow-xs)" opacity="0.92"/>
+    <rect x="257" y="374" width="14" height="8" rx="2.5" fill="#00d4ff" filter="url(#glow-xs)" opacity="0.92"/>
+    <rect x="275" y="371" width="13" height="8" rx="2.5" fill="#00d4ff" filter="url(#glow-xs)" opacity="0.92"/>
+    <rect x="293" y="366" width="13" height="8" rx="2.5" fill="#00d4ff" filter="url(#glow-xs)" opacity="0.9"/>
+    <rect x="311" y="358" width="13" height="8" rx="2.5" fill="#00d4ff" filter="url(#glow-xs)" opacity="0.88"/>
+
+    <!-- Cheek circuit accents -->
+    <path d="M 163 300 L 178 300 L 178 318 L 192 318"
+          stroke="#00d4ff" stroke-width="1" fill="none" opacity="0.28"/>
+    <path d="M 349 300 L 334 300 L 334 318 L 320 318"
+          stroke="#00d4ff" stroke-width="1" fill="none" opacity="0.28"/>
+
+    <!-- ═══ TOP HAT ═══ -->
+    <!-- Hat body -->
+    <rect x="126" y="44" width="260" height="152" rx="9" fill="url(#hat-grad)"/>
+    <!-- Hat body outline / glow -->
+    <rect x="126" y="44" width="260" height="152" rx="9" fill="none"
+          stroke="#00d4ff" stroke-width="2.5" opacity="0.82" filter="url(#glow-xs)"/>
+    <!-- Hat body inner highlight edge -->
+    <rect x="130" y="48" width="252" height="144" rx="7" fill="none"
+          stroke="#224466" stroke-width="1" opacity="0.4"/>
+
+    <!-- Hat top flat cap (subtle ellipse) -->
+    <ellipse cx="256" cy="44" rx="130" ry="7" fill="#1c2e46" stroke="#00d4ff" stroke-width="1.5" opacity="0.72"/>
+
+    <!-- ═══ $ DOLLAR SIGN on hat ═══ -->
+    <!-- Shadow/depth layer -->
+    <text x="256" y="167"
+          text-anchor="middle"
+          font-family="Georgia, 'Times New Roman', serif"
+          font-size="98"
+          font-weight="bold"
+          fill="#00d4ff"
+          opacity="0.06"
+          filter="url(#glow-lg)">$</text>
+    <!-- Main $ with outline -->
+    <text x="256" y="167"
+          text-anchor="middle"
+          font-family="Georgia, 'Times New Roman', serif"
+          font-size="98"
+          font-weight="bold"
+          fill="none"
+          stroke="#00d4ff"
+          stroke-width="1.5"
+          opacity="0.18">$</text>
+    <text x="256" y="167"
+          text-anchor="middle"
+          font-family="Georgia, 'Times New Roman', serif"
+          font-size="98"
+          font-weight="bold"
+          fill="#00d4ff"
+          opacity="0.82"
+          filter="url(#glow-md)">$</text>
+
+    <!-- Hat circuit traces -->
+    <path d="M 148 72 L 172 72 L 172 92" stroke="#00d4ff" stroke-width="1.5" fill="none" opacity="0.3" filter="url(#glow-xs)"/>
+    <path d="M 364 72 L 340 72 L 340 92" stroke="#00d4ff" stroke-width="1.5" fill="none" opacity="0.3" filter="url(#glow-xs)"/>
+    <path d="M 148 132 L 182 132 L 182 148 L 200 148" stroke="#00d4ff" stroke-width="1" fill="none" opacity="0.2"/>
+    <path d="M 364 132 L 330 132 L 330 148 L 312 148" stroke="#00d4ff" stroke-width="1" fill="none" opacity="0.2"/>
+    <!-- Circuit nodes on hat -->
+    <circle cx="172" cy="92" r="2.5" fill="#00d4ff" opacity="0.5"/>
+    <circle cx="340" cy="92" r="2.5" fill="#00d4ff" opacity="0.5"/>
+
+    <!-- ═══ HAT BAND ═══ -->
+    <!-- Band fill -->
+    <rect x="126" y="172" width="260" height="24" fill="#00d4ff" opacity="0.07"/>
+    <!-- Band borders -->
+    <line x1="126" y1="172" x2="386" y2="172" stroke="#00d4ff" stroke-width="1.8" opacity="0.78"/>
+    <line x1="126" y1="196" x2="386" y2="196" stroke="#00d4ff" stroke-width="1.8" opacity="0.78"/>
+    <!-- LED dots on band (like a status bar) -->
+    <circle cx="152" cy="184" r="4" fill="#00ff88" opacity="0.9" filter="url(#glow-xs)"/>
+    <circle cx="176" cy="184" r="4" fill="#00d4ff" opacity="0.9" filter="url(#glow-xs)"/>
+    <circle cx="200" cy="184" r="4" fill="#7b2fff" opacity="0.9" filter="url(#glow-xs)"/>
+    <circle cx="224" cy="184" r="4" fill="#00d4ff" opacity="0.9" filter="url(#glow-xs)"/>
+    <circle cx="248" cy="184" r="4" fill="#00d4ff" opacity="0.9" filter="url(#glow-xs)"/>
+    <circle cx="272" cy="184" r="4" fill="#7b2fff" opacity="0.9" filter="url(#glow-xs)"/>
+    <circle cx="296" cy="184" r="4" fill="#00d4ff" opacity="0.9" filter="url(#glow-xs)"/>
+    <circle cx="320" cy="184" r="4" fill="#00d4ff" opacity="0.9" filter="url(#glow-xs)"/>
+    <circle cx="344" cy="184" r="4" fill="#00ff88" opacity="0.9" filter="url(#glow-xs)"/>
+    <circle cx="368" cy="184" r="4" fill="#00d4ff" opacity="0.9" filter="url(#glow-xs)"/>
+
+    <!-- ═══ HAT BRIM ═══ -->
+    <!-- Brim underside shadow -->
+    <ellipse cx="256" cy="202" rx="158" ry="19" fill="#060e18" opacity="0.7"/>
+    <!-- Brim top surface -->
+    <ellipse cx="256" cy="198" rx="158" ry="17" fill="#0f1e30"
+             stroke="#00d4ff" stroke-width="2.2" opacity="0.9"/>
+    <!-- Brim glow -->
+    <ellipse cx="256" cy="198" rx="158" ry="17" fill="none"
+             stroke="#00d4ff" stroke-width="2.2" filter="url(#glow-sm)" opacity="0.5"/>
+    <!-- Brim surface highlight -->
+    <ellipse cx="236" cy="194" rx="90" ry="8" fill="white" opacity="0.025"/>
+
+    <!-- ═══ AMBIENT EYE GLOW (atmosphere) ═══ -->
+    <circle cx="208" cy="282" r="55" fill="#00ff88" opacity="0.022" filter="url(#glow-lg)"/>
+    <circle cx="304" cy="282" r="55" fill="#00aaff" opacity="0.022" filter="url(#glow-lg)"/>
+    <!-- $ glow ambient -->
+    <text x="256" y="167"
+          text-anchor="middle"
+          font-family="Georgia, 'Times New Roman', serif"
+          font-size="98"
+          font-weight="bold"
+          fill="#00d4ff"
+          opacity="0.04"
+          filter="url(#glow-lg)">$</text>
+
+  </g>
+
+  <!-- ═══ OUTER RING (outside clip) ═══ -->
+  <circle cx="256" cy="256" r="248" fill="none" stroke="#00d4ff" stroke-width="3"
+          opacity="0.82" filter="url(#glow-sm)"/>
+  <circle cx="256" cy="256" r="251" fill="none" stroke="#003355" stroke-width="1.5" opacity="0.55"/>
+  <circle cx="256" cy="256" r="245" fill="none" stroke="#001a33" stroke-width="1" opacity="0.3"/>
+
+</svg>

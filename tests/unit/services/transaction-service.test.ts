@@ -22,8 +22,12 @@ function setupTestDb(): Database.Database {
   const db = new Database(':memory:');
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
-  const sql = fs.readFileSync(path.join(__dirname, '../../../src/main/migrations/001_initial.sql'), 'utf-8');
-  db.exec(sql);
+  const migrationsDir = path.join(__dirname, '../../../src/main/migrations');
+  const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
+  for (const file of files) {
+    const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf-8');
+    db.exec(sql);
+  }
   return db;
 }
 
@@ -107,6 +111,18 @@ describe('transaction-service', () => {
       const result = listTransactions({ accountId, offset: 0, limit: 50 });
       expect(result.transactions[0].categoryName).toBe('Food');
       expect(result.transactions[0].subcategoryName).toBe('Groceries');
+    });
+
+    it('includes category info when transaction is assigned directly to parent category', () => {
+      testDb.prepare("INSERT INTO categories (name) VALUES (?)").run('Sports');
+      const categoryId = (testDb.prepare("SELECT last_insert_rowid() as id").get() as any).id;
+      testDb.prepare(
+        "INSERT INTO transactions (account_id, date, amount, category_id, subcategory_id, description) VALUES (?, ?, ?, ?, NULL, ?)"
+      ).run(accountId, '2024-01-11', -3990, categoryId, 'Gym');
+
+      const result = listTransactions({ accountId, offset: 0, limit: 50 });
+      expect(result.transactions[0].categoryName).toBe('Sports');
+      expect(result.transactions[0].subcategoryName).toBeNull();
     });
   });
 

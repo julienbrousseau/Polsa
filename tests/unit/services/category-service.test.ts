@@ -26,9 +26,12 @@ function setupTestDb(): Database.Database {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
 
-  const migrationPath = path.join(__dirname, '../../../src/main/migrations/001_initial.sql');
-  const sql = fs.readFileSync(migrationPath, 'utf-8');
-  db.exec(sql);
+  const migrationsDir = path.join(__dirname, '../../../src/main/migrations');
+  const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
+  for (const file of files) {
+    const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf-8');
+    db.exec(sql);
+  }
 
   return db;
 }

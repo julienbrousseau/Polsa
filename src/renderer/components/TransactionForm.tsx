@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { todayISO } from '../lib/format';
 import type { CategoryWithSubs, TransactionDisplay } from '../lib/types';
+import CategoryAutocomplete, { type CategoryValue } from './CategoryAutocomplete';
 
 interface Props {
   accountId: number;
   categories: CategoryWithSubs[];
   transaction?: TransactionDisplay | null;
-  onSave: (tx: { id?: number; date: string; amount: number; subcategoryId: number | null; description: string }) => Promise<void>;
+  onSave: (tx: { id?: number; date: string; amount: number; categoryId: number | null; subcategoryId: number | null; description: string }) => Promise<void>;
   onDelete?: (id: number) => Promise<void>;
   onClose: () => void;
 }
@@ -17,9 +18,10 @@ export default function TransactionForm({ accountId, categories, transaction, on
   const [amountStr, setAmountStr] = useState(
     transaction ? (transaction.amount / 100).toFixed(2) : ''
   );
-  const [subcategoryId, setSubcategoryId] = useState<number | null>(
-    transaction?.subcategoryId ?? null
-  );
+  const [category, setCategory] = useState<CategoryValue>({
+    categoryId: transaction?.categoryId ?? null,
+    subcategoryId: transaction?.subcategoryId ?? null,
+  });
   const [description, setDescription] = useState(transaction?.description ?? '');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -39,7 +41,8 @@ export default function TransactionForm({ accountId, categories, transaction, on
         id: transaction?.id,
         date,
         amount: amt,
-        subcategoryId,
+        categoryId: category.categoryId,
+        subcategoryId: category.subcategoryId,
         description,
       });
       onClose();
@@ -103,22 +106,13 @@ export default function TransactionForm({ accountId, categories, transaction, on
 
           <div>
             <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Category</label>
-            <select
-              value={subcategoryId ?? ''}
-              onChange={(e) => setSubcategoryId(e.target.value ? Number(e.target.value) : null)}
-              className="input-cyber w-full rounded-lg px-3 py-2 text-xs [color-scheme:dark]"
-            >
-              <option value="">No category</option>
-              {categories.map((cat) => (
-                <optgroup key={cat.id} label={cat.name}>
-                  {cat.subcategories.map((sub) => (
-                    <option key={sub.id} value={sub.id}>
-                      {sub.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+            <CategoryAutocomplete
+              categories={categories}
+              value={category}
+              onChange={setCategory}
+              placeholder="Search category…"
+              className="[&_input]:px-3 [&_input]:py-2"
+            />
           </div>
 
           <div>

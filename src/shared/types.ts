@@ -30,6 +30,7 @@ export interface Transaction {
   accountId: number;
   date: string;             // YYYY-MM-DD
   amount: number;           // cents
+  categoryId: number | null;
   subcategoryId: number | null;
   description: string;
   reconciled: boolean;
@@ -76,6 +77,7 @@ export interface CreateTransactionInput {
   accountId: number;
   date: string;
   amount: number;
+  categoryId?: number | null;
   subcategoryId?: number | null;
   description: string;
 }
@@ -84,6 +86,7 @@ export interface UpdateTransactionInput {
   id: number;
   date: string;
   amount: number;
+  categoryId?: number | null;
   subcategoryId?: number | null;
   description: string;
 }
@@ -100,7 +103,6 @@ export type QifDateFormat = 'MM/DD/YYYY' | 'DD/MM/YYYY';
 export interface QifImportInput {
   accountId: number;
   filePath: string;
-  dateFormat: QifDateFormat;
 }
 
 export interface QifImportResult {
@@ -153,4 +155,94 @@ export interface UpdateRecurringInput {
   subcategoryId?: number | null;
   frequency?: RecurrenceFrequency;
   nextDate?: string;
+}
+
+// Reconciliation
+
+export interface ReconcileBalanceResult {
+  reconciledBalance: number;    // cents
+}
+
+export interface ReconcileUnreconciledInput {
+  accountId: number;
+  offset: number;
+  limit: number;
+}
+
+export interface ReconcileConfirmInput {
+  transactionIds: number[];
+}
+
+export interface ReconcileConfirmResult {
+  reconciled: number;           // count of transactions marked
+}
+
+// Budgets
+
+export interface BudgetOverview {
+  year: number;
+  month: number;
+  totalAllocated: number;
+  totalSpent: number;
+  totalAvailable: number;
+  categories: BudgetCategoryRow[];
+}
+
+export interface BudgetCategoryRow {
+  categoryId: number;
+  categoryName: string;
+  allocated: number;
+  rollover: number;
+  spent: number;
+  available: number;
+  subcategories: BudgetSubcategoryRow[];
+}
+
+export interface BudgetSubcategoryRow {
+  subcategoryId: number;
+  subcategoryName: string;
+  allocated: number;
+  rollover: number;
+  spent: number;
+  available: number;
+}
+
+export interface BudgetAllocation {
+  subcategoryId: number | null;
+  categoryId: number;
+  categoryName: string;
+  subcategoryName: string | null;
+  amount: number;
+}
+
+export interface SetAllocationInput {
+  subcategoryId: number | null;
+  categoryId: number;
+  year: number;
+  month: number;
+  amount: number;
+  applyToFutureMonths: boolean;
+}
+
+export interface SetAllocationsInput {
+  year: number;
+  month: number;
+  allocations: {
+    subcategoryId: number | null;
+    categoryId: number;
+    amount: number;
+  }[];
+  applyToFutureMonths: boolean;
+}
+
+export interface BudgetDefault {
+  subcategoryId: number | null;
+  categoryId: number;
+  amount: number;
+  effectiveFrom: string;
+}
+
+export interface BudgetOverviewInput {
+  year: number;
+  month: number;
 }

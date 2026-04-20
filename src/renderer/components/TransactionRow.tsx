@@ -12,6 +12,11 @@ export default function TransactionRow({ transaction: tx, onEdit }: Props) {
       onClick={() => onEdit(tx)}
       className="cursor-pointer border-b border-[var(--color-border-glass)] transition-all duration-200 hover:bg-[var(--color-accent)]/5"
     >
+      <td className="px-3 py-2 text-center" title={tx.reconciled ? 'Reconciled' : undefined}>
+        {tx.reconciled && (
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--color-positive)] opacity-70" />
+        )}
+      </td>
       <td className="whitespace-nowrap px-3 py-2 text-xs font-mono text-[var(--color-text-muted)]">
         {formatDate(tx.date)}
       </td>

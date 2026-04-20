@@ -212,8 +212,8 @@ export function applyOverdue(today?: string): { applied: number } {
     `).all(todayStr) as any[];
 
     const insertTx = db.prepare(`
-      INSERT INTO transactions (account_id, date, amount, subcategory_id, description)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO transactions (account_id, date, amount, category_id, subcategory_id, description)
+      VALUES (?, ?, ?, NULL, ?, ?)
     `);
     const updateNext = db.prepare(`
       UPDATE recurring_transactions SET next_date = ? WHERE id = ?

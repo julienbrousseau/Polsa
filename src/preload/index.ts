@@ -39,6 +39,12 @@ export interface PolsaAPI {
     pickImportFile: () => Promise<string | null>;
     pickExportFile: () => Promise<string | null>;
   };
+  // Reconcile
+  reconcile: {
+    getBalance: (accountId: number) => Promise<any>;
+    getUnreconciled: (input: any) => Promise<any>;
+    confirm: (input: any) => Promise<any>;
+  };
   // Recurring
   recurring: {
     list: () => Promise<any[]>;
@@ -49,6 +55,21 @@ export interface PolsaAPI {
     reactivate: (id: number) => Promise<any>;
     delete: (id: number) => Promise<void>;
     applyOverdue: () => Promise<{ applied: number }>;
+  };
+  // Budgets
+  budgets: {
+    overview: (input: any) => Promise<any>;
+    getAllocations: (input: any) => Promise<any>;
+    setAllocation: (input: any) => Promise<void>;
+    setAllocations: (input: any) => Promise<void>;
+    getDefaults: () => Promise<any[]>;
+  };
+  // Mobile Sync
+  sync: {
+    importMobile: (payload: any) => Promise<any>;
+    generatePayload: () => Promise<any>;
+    startServer: () => Promise<any>;
+    stopServer: () => Promise<void>;
   };
 }
 
@@ -84,6 +105,11 @@ const api: PolsaAPI = {
     pickImportFile: () => ipcRenderer.invoke('qif:pick-import-file'),
     pickExportFile: () => ipcRenderer.invoke('qif:pick-export-file'),
   },
+  reconcile: {
+    getBalance: (accountId) => ipcRenderer.invoke('reconcile:getBalance', accountId),
+    getUnreconciled: (input) => ipcRenderer.invoke('reconcile:getUnreconciled', input),
+    confirm: (input) => ipcRenderer.invoke('reconcile:confirm', input),
+  },
   recurring: {
     list: () => ipcRenderer.invoke('recurring:list'),
     get: (id) => ipcRenderer.invoke('recurring:get', id),
@@ -93,6 +119,19 @@ const api: PolsaAPI = {
     reactivate: (id) => ipcRenderer.invoke('recurring:reactivate', id),
     delete: (id) => ipcRenderer.invoke('recurring:delete', id),
     applyOverdue: () => ipcRenderer.invoke('recurring:applyOverdue'),
+  },
+  budgets: {
+    overview: (input) => ipcRenderer.invoke('budgets:overview', input),
+    getAllocations: (input) => ipcRenderer.invoke('budgets:getAllocations', input),
+    setAllocation: (input) => ipcRenderer.invoke('budgets:setAllocation', input),
+    setAllocations: (input) => ipcRenderer.invoke('budgets:setAllocations', input),
+    getDefaults: () => ipcRenderer.invoke('budgets:getDefaults'),
+  },
+  sync: {
+    importMobile: (payload) => ipcRenderer.invoke('sync:importMobile', payload),
+    generatePayload: () => ipcRenderer.invoke('sync:generatePayload'),
+    startServer: () => ipcRenderer.invoke('sync:startServer'),
+    stopServer: () => ipcRenderer.invoke('sync:stopServer'),
   },
 };
 

@@ -26,8 +26,12 @@ function setupTestDb(): Database.Database {
   const db = new Database(':memory:');
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
-  const sql = fs.readFileSync(path.join(__dirname, '../../../src/main/migrations/001_initial.sql'), 'utf-8');
-  db.exec(sql);
+  const migrationsDir = path.join(__dirname, '../../../src/main/migrations');
+  const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
+  for (const file of files) {
+    const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf-8');
+    db.exec(sql);
+  }
   return db;
 }
 
@@ -38,6 +42,10 @@ function createTestAccount(db: Database.Database): number {
 
 describe('qif-service', () => {
   describe('parseQifDate', () => {
+    it('parses ISO YYYY-MM-DD', () => {
+      expect(parseQifDate('2025-12-13', 'MM/DD/YYYY')).toBe('2025-12-13');
+    });
+
     it('parses MM/DD/YYYY', () => {
       expect(parseQifDate('01/15/2024', 'MM/DD/YYYY')).toBe('2024-01-15');
     });
@@ -124,6 +132,38 @@ describe('qif-service', () => {
     it('handles empty file', () => {
       expect(parseQifFile('', 'MM/DD/YYYY')).toEqual([]);
     });
+
+    it('parses slash-separated category and ISO date', () => {
+      const content = [
+        '!Type:Bank',
+        'D2025-12-13',
+        'T-45.20',
+        'PPharmacy',
+        'LSoins / Habillement',
+        '^',
+      ].join('\n');
+
+      const txs = parseQifFile(content);
+      expect(txs).toHaveLength(1);
+      expect(txs[0].date).toBe('2025-12-13');
+      expect(txs[0].category).toBe('Soins');
+      expect(txs[0].subcategory).toBe('Habillement');
+    });
+
+    it('normalizes extra spaces in category and subcategory names', () => {
+      const content = [
+        '!Type:Bank',
+        'D2025-12-13',
+        'T-45.20',
+        'L  Soins   /   Habillement   ',
+        '^',
+      ].join('\n');
+
+      const txs = parseQifFile(content);
+      expect(txs).toHaveLength(1);
+      expect(txs[0].category).toBe('Soins');
+      expect(txs[0].subcategory).toBe('Habillement');
+    });
   });
 
   describe('importQif', () => {
@@ -144,14 +184,14 @@ describe('qif-service', () => {
     it('imports transactions and creates categories', () => {
       fs.writeFileSync(tmpFile, [
         '!Type:Bank',
-        'D15/01/2024',
+        'D2024-01-15',
         'T-25.50',
         'PCoffee Shop',
-        'LFood:Coffee',
+        'LFood / Coffee',
         '^',
       ].join('\n'));
 
-      const result = importQif({ accountId, filePath: tmpFile, dateFormat: 'DD/MM/YYYY' });
+      const result = importQif({ accountId, filePath: tmpFile });
       expect(result.imported).toBe(1);
       expect(result.createdCategories).toContain('Food');
       expect(result.createdCategories).toContain('Food:Coffee');
@@ -166,6 +206,32 @@ describe('qif-service', () => {
       expect(cat).toBeDefined();
       const sub = testDb.prepare("SELECT id FROM subcategories WHERE name = 'Coffee'").get() as any;
       expect(sub).toBeDefined();
+    });
+
+    it('assigns parent-only category without creating a subcategory', () => {
+      fs.writeFileSync(tmpFile, [
+        '!Type:Bank',
+        'D2024-01-16',
+        'T-19.90',
+        'PSports Shop',
+        'LSports',
+        '^',
+      ].join('\n'));
+
+      const result = importQif({ accountId, filePath: tmpFile });
+      expect(result.imported).toBe(1);
+      expect(result.createdCategories).toContain('Sports');
+      expect(result.createdCategories).not.toContain('Sports:Sports');
+
+      const tx = testDb.prepare('SELECT * FROM transactions WHERE account_id = ?').get(accountId) as any;
+      expect(tx.category_id).not.toBeNull();
+      expect(tx.subcategory_id).toBeNull();
+
+      const cat = testDb.prepare("SELECT id FROM categories WHERE name = 'Sports'").get() as any;
+      expect(cat).toBeDefined();
+      const subCount = (testDb.prepare("SELECT COUNT(*) as c FROM subcategories WHERE category_id = ?").get(cat.id) as any).c;
+      expect(subCount).toBe(0);
+      expect(tx.category_id).toBe(cat.id);
     });
   });
 

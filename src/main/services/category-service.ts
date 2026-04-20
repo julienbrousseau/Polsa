@@ -51,7 +51,10 @@ export function renameCategory(input: { id: number; name: string }): Category {
 export function deleteCategory(id: number): void {
   if (!isValidInteger(id)) throw new Error('Invalid category ID');
   const db = getDb();
-  const changes = db.prepare(`DELETE FROM categories WHERE id = ?`).run(id);
+  const changes = db.transaction(() => {
+    db.prepare('UPDATE transactions SET category_id = NULL WHERE category_id = ?').run(id);
+    return db.prepare(`DELETE FROM categories WHERE id = ?`).run(id);
+  })();
   if (changes.changes === 0) throw new Error(`Category ${id} not found`);
 }
 
@@ -103,9 +106,9 @@ export function listCategoryTransactions(input: CategoryTransactionInput): Categ
     whereClause = 't.subcategory_id = ?';
     params = [input.subcategoryId];
   } else if (input.categoryId != null) {
-    // All subcategories of a category
-    whereClause = 's.category_id = ?';
-    params = [input.categoryId];
+    // Category-level transactions + all subcategories of a category
+    whereClause = '(s.category_id = ? OR t.category_id = ?)';
+    params = [input.categoryId, input.categoryId];
   } else {
     throw new Error('Either categoryId or subcategoryId is required');
   }
@@ -119,11 +122,13 @@ export function listCategoryTransactions(input: CategoryTransactionInput): Categ
 
   const rows = db.prepare(`
     SELECT t.id, t.account_id, t.date, t.amount, t.subcategory_id, t.description, t.reconciled,
-           s.name as subcategory_name, c.name as category_name,
+        s.name as subcategory_name,
+        COALESCE(c_sub.name, c_dir.name) as category_name,
            a.name as account_name
     FROM transactions t
     LEFT JOIN subcategories s ON s.id = t.subcategory_id
-    LEFT JOIN categories c ON c.id = s.category_id
+      LEFT JOIN categories c_sub ON c_sub.id = s.category_id
+      LEFT JOIN categories c_dir ON c_dir.id = t.category_id
     LEFT JOIN accounts a ON a.id = t.account_id
     WHERE ${whereClause}
     ORDER BY t.date DESC, t.id DESC

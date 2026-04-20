@@ -20,4 +20,8 @@ export type {
   RecurringTransaction,
   CreateRecurringInput,
   UpdateRecurringInput,
+  ReconcileBalanceResult,
+  ReconcileUnreconciledInput,
+  ReconcileConfirmInput,
+  ReconcileConfirmResult,
 } from '@shared/types';

@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
+import Dashboard from './pages/Dashboard';
 import AccountList from './pages/AccountList';
 import AccountDetail from './pages/AccountDetail';
 import AccountForm from './pages/AccountForm';
@@ -7,12 +8,17 @@ import Categories from './pages/Categories';
 import CategoryDetail from './pages/CategoryDetail';
 import RecurringList from './pages/RecurringList';
 import RecurringForm from './pages/RecurringForm';
+import Reconcile from './pages/Reconcile';
+import BudgetOverview from './pages/BudgetOverview';
+import BudgetSetup from './pages/BudgetSetup';
+import MobileSync from './pages/MobileSync';
 
 export default function App() {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<AccountList />} />
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/accounts" element={<AccountList />} />
         <Route path="/accounts/new" element={<AccountForm />} />
         <Route path="/accounts/:id" element={<AccountDetail />} />
         <Route path="/accounts/:id/edit" element={<AccountForm />} />
@@ -21,6 +27,10 @@ export default function App() {
         <Route path="/recurring" element={<RecurringList />} />
         <Route path="/recurring/new" element={<RecurringForm />} />
         <Route path="/recurring/:id/edit" element={<RecurringForm />} />
+        <Route path="/reconcile" element={<Reconcile />} />
+        <Route path="/budgets" element={<BudgetOverview />} />
+        <Route path="/budgets/setup" element={<BudgetSetup />} />
+        <Route path="/sync" element={<MobileSync />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

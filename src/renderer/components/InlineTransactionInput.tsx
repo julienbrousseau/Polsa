@@ -1,17 +1,18 @@
 import { useState, useRef, useEffect } from 'react';
 import { todayISO } from '../lib/format';
 import type { CategoryWithSubs } from '../lib/types';
+import CategoryAutocomplete, { type CategoryValue } from './CategoryAutocomplete';
 
 interface Props {
   accountId: number;
   categories: CategoryWithSubs[];
-  onSave: (tx: { date: string; amount: number; subcategoryId: number | null; description: string }) => Promise<void>;
+  onSave: (tx: { date: string; amount: number; categoryId: number | null; subcategoryId: number | null; description: string }) => Promise<void>;
 }
 
 export default function InlineTransactionInput({ accountId, categories, onSave }: Props) {
   const [date, setDate] = useState(todayISO());
   const [amountStr, setAmountStr] = useState('');
-  const [subcategoryId, setSubcategoryId] = useState<number | null>(null);
+  const [category, setCategory] = useState<CategoryValue>({ categoryId: null, subcategoryId: null });
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const dateRef = useRef<HTMLInputElement>(null);
@@ -25,12 +26,13 @@ export default function InlineTransactionInput({ accountId, categories, onSave }
       await onSave({
         date,
         amount: amt,
-        subcategoryId,
+        categoryId: category.categoryId,
+        subcategoryId: category.subcategoryId,
         description,
       });
       // Reset for next entry
       setAmountStr('');
-      setSubcategoryId(null);
+      setCategory({ categoryId: null, subcategoryId: null });
       setDescription('');
       setDate(todayISO());
       dateRef.current?.focus();
@@ -48,6 +50,8 @@ export default function InlineTransactionInput({ accountId, categories, onSave }
 
   return (
     <tr className="border-b border-[var(--color-accent)]/10 bg-[var(--color-accent)]/[0.03]">
+      {/* Reconcile column placeholder */}
+      <td />
       <td className="px-3 py-2">
         <input
           ref={dateRef}
@@ -69,23 +73,13 @@ export default function InlineTransactionInput({ accountId, categories, onSave }
         />
       </td>
       <td className="px-3 py-2">
-        <select
-          value={subcategoryId ?? ''}
-          onChange={(e) => setSubcategoryId(e.target.value ? Number(e.target.value) : null)}
+        <CategoryAutocomplete
+          categories={categories}
+          value={category}
+          onChange={setCategory}
           onKeyDown={handleKeyDown}
-          className="input-cyber w-full rounded-lg px-2 py-1.5 text-xs [color-scheme:dark]"
-        >
-          <option value="">No category</option>
-          {categories.map((cat) => (
-            <optgroup key={cat.id} label={cat.name}>
-              {cat.subcategories.map((sub) => (
-                <option key={sub.id} value={sub.id}>
-                  {sub.name}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
+          placeholder="Category"
+        />
       </td>
       <td className="px-3 py-2">
         <input

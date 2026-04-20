@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Polsa</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 440px;
+      height: 300px;
+      overflow: hidden;
+      background: transparent;
+      font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+      -webkit-app-region: drag;
+    }
+
+    .card {
+      width: 440px;
+      height: 300px;
+      background: radial-gradient(ellipse at 40% 40%, #0d1a2e 0%, #07101c 55%, #030912 100%);
+      border: 1.5px solid rgba(0, 212, 255, 0.28);
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      position: relative;
+      overflow: hidden;
+      box-shadow:
+        0 0 40px rgba(0, 212, 255, 0.10),
+        0 0 100px rgba(0, 212, 255, 0.04),
+        inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+
+    /* Corner circuit accents */
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 12px; left: 12px;
+      width: 32px; height: 32px;
+      border-top: 1.5px solid rgba(0, 212, 255, 0.45);
+      border-left: 1.5px solid rgba(0, 212, 255, 0.45);
+      border-radius: 3px 0 0 0;
+    }
+    .card::after {
+      content: '';
+      position: absolute;
+      bottom: 12px; right: 12px;
+      width: 32px; height: 32px;
+      border-bottom: 1.5px solid rgba(0, 212, 255, 0.45);
+      border-right: 1.5px solid rgba(0, 212, 255, 0.45);
+      border-radius: 0 0 3px 0;
+    }
+
+    /* Scan-line shimmer overlay */
+    .scanlines {
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(0, 0, 0, 0.04) 3px,
+        rgba(0, 0, 0, 0.04) 4px
+      );
+      pointer-events: none;
+      border-radius: 20px;
+    }
+
+    /* Moving scan line */
+    .scan {
+      position: absolute;
+      left: 0; right: 0;
+      height: 60px;
+      background: linear-gradient(180deg,
+        transparent 0%,
+        rgba(0, 212, 255, 0.04) 50%,
+        transparent 100%
+      );
+      animation: scan-move 3s linear infinite;
+      pointer-events: none;
+    }
+
+    @keyframes scan-move {
+      0%   { top: -60px; }
+      100% { top: 360px; }
+    }
+
+    /* Icon wrapper */
+    .icon-wrap {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      margin-bottom: 18px;
+      flex-shrink: 0;
+    }
+
+    .icon-wrap svg {
+      width: 120px;
+      height: 120px;
+      filter: drop-shadow(0 0 16px rgba(0, 212, 255, 0.5))
+              drop-shadow(0 0 40px rgba(0, 212, 255, 0.2));
+      animation: icon-pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes icon-pulse {
+      0%, 100% { filter: drop-shadow(0 0 14px rgba(0,212,255,0.45)) drop-shadow(0 0 36px rgba(0,212,255,0.18)); }
+      50%       { filter: drop-shadow(0 0 24px rgba(0,212,255,0.75)) drop-shadow(0 0 60px rgba(0,212,255,0.30)); }
+    }
+
+    /* Text */
+    .app-name {
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: 0.22em;
+      color: #e8f4ff;
+      text-transform: uppercase;
+      text-shadow:
+        0 0 12px rgba(0, 212, 255, 0.6),
+        0 0 30px rgba(0, 212, 255, 0.25);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .tagline {
+      font-size: 10.5px;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: rgba(0, 212, 255, 0.65);
+      margin-bottom: 28px;
+    }
+
+    /* Loading dots */
+    .dots {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+    }
+
+    .dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #00d4ff;
+      opacity: 0.2;
+      animation: dot-blink 1.4s ease-in-out infinite;
+      box-shadow: 0 0 6px rgba(0, 212, 255, 0.6);
+    }
+
+    .dot:nth-child(1) { animation-delay: 0s; }
+    .dot:nth-child(2) { animation-delay: 0.22s; }
+    .dot:nth-child(3) { animation-delay: 0.44s; }
+    .dot:nth-child(4) { animation-delay: 0.66s; }
+    .dot:nth-child(5) { animation-delay: 0.88s; }
+
+    @keyframes dot-blink {
+      0%, 80%, 100% { opacity: 0.15; transform: scale(1); }
+      40%            { opacity: 1;    transform: scale(1.35); }
+    }
+
+    /* Bottom version text */
+    .version {
+      position: absolute;
+      bottom: 16px;
+      right: 20px;
+      font-size: 9.5px;
+      letter-spacing: 0.15em;
+      color: rgba(0, 212, 255, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="scanlines"></div>
+    <div class="scan"></div>
+
+    <!-- Icon -->
+    <div class="icon-wrap">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+        <defs>
+          <filter id="s-glow-xs" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="2.5" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="s-glow-sm" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="5" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="s-glow-md" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="10" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="s-glow-lg" x="-200%" y="-200%" width="500%" height="500%">
+            <feGaussianBlur stdDeviation="20" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="s-bg-grad" cx="50%" cy="42%" r="58%">
+            <stop offset="0%" stop-color="#0e1f36"/>
+            <stop offset="60%" stop-color="#070f1c"/>
+            <stop offset="100%" stop-color="#030710"/>
+          </radialGradient>
+          <radialGradient id="s-face-grad" cx="38%" cy="32%" r="65%">
+            <stop offset="0%" stop-color="#16273b"/>
+            <stop offset="100%" stop-color="#08121e"/>
+          </radialGradient>
+          <linearGradient id="s-hat-grad" x1="0%" y1="0%" x2="10%" y2="100%">
+            <stop offset="0%" stop-color="#192840"/>
+            <stop offset="100%" stop-color="#0b1828"/>
+          </linearGradient>
+          <linearGradient id="s-suit-grad" x1="10%" y1="0%" x2="90%" y2="100%">
+            <stop offset="0%" stop-color="#101e2e"/>
+            <stop offset="100%" stop-color="#060e18"/>
+          </linearGradient>
+          <radialGradient id="s-eye-green" cx="30%" cy="28%" r="65%">
+            <stop offset="0%" stop-color="#00ff88"/>
+            <stop offset="50%" stop-color="#00cc66"/>
+            <stop offset="100%" stop-color="#007733"/>
+          </radialGradient>
+          <radialGradient id="s-eye-blue" cx="30%" cy="28%" r="65%">
+            <stop offset="0%" stop-color="#44ddff"/>
+            <stop offset="50%" stop-color="#00aaee"/>
+            <stop offset="100%" stop-color="#005588"/>
+          </radialGradient>
+          <pattern id="s-circuit-grid" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
+            <path d="M 0 24 L 10 24 L 10 10 L 24 10" stroke="#00d4ff" stroke-width="0.6" fill="none" opacity="0.1"/>
+            <path d="M 48 24 L 38 24 L 38 38 L 24 38" stroke="#00d4ff" stroke-width="0.6" fill="none" opacity="0.1"/>
+            <circle cx="10" cy="10" r="1.8" fill="#00d4ff" opacity="0.18"/>
+            <circle cx="38" cy="38" r="1.8" fill="#00d4ff" opacity="0.18"/>
+          </pattern>
+          <clipPath id="s-icon-clip"><circle cx="256" cy="256" r="250"/></clipPath>
+        </defs>
+        <circle cx="256" cy="256" r="256" fill="#030710"/>
+        <circle cx="256" cy="256" r="256" fill="url(#s-bg-grad)"/>
+        <g clip-path="url(#s-icon-clip)">
+          <rect x="0" y="0" width="512" height="512" fill="url(#s-circuit-grid)"/>
+          <circle cx="256" cy="256" r="230" fill="none" stroke="#00d4ff" stroke-width="0.4" opacity="0.06"/>
+          <circle cx="256" cy="256" r="180" fill="none" stroke="#00d4ff" stroke-width="0.4" opacity="0.05"/>
+          <path d="M 50 530 L 95 415 L 160 382 L 204 430 L 256 405 L 308 430 L 352 382 L 417 415 L 462 530 Z" fill="url(#s-suit-grad)"/>
+          <path d="M 95 415 L 160 382" stroke="#00d4ff" stroke-width="1.5" opacity="0.3"/>
+          <path d="M 352 382 L 417 415" stroke="#00d4ff" stroke-width="1.5" opacity="0.3"/>
+          <path d="M 204 430 L 256 480 L 308 430 L 292 404 L 256 448 L 220 404 Z" fill="#0b1928" stroke="#00d4ff" stroke-width="1.2" opacity="0.85"/>
+          <polygon points="242,406 256,444 270,406 262,396 256,404 250,396" fill="#ddeeff" opacity="0.88"/>
+          <path d="M 216 404 L 245 390 L 256 404 L 245 418 Z" fill="#00ff88" opacity="0.95"/>
+          <path d="M 296 404 L 267 390 L 256 404 L 267 418 Z" fill="#00ff88" opacity="0.95"/>
+          <ellipse cx="256" cy="404" rx="13" ry="11" fill="#00cc66" filter="url(#s-glow-sm)"/>
+          <ellipse cx="256" cy="404" rx="7" ry="6" fill="#00ff88" opacity="0.95"/>
+          <path d="M 172 402 L 172 428 L 192 428 L 192 452" stroke="#00d4ff" stroke-width="1.5" fill="none" opacity="0.4" filter="url(#s-glow-xs)"/>
+          <path d="M 340 402 L 340 428 L 320 428 L 320 452" stroke="#00d4ff" stroke-width="1.5" fill="none" opacity="0.4" filter="url(#s-glow-xs)"/>
+          <circle cx="192" cy="452" r="3" fill="#00d4ff" opacity="0.65" filter="url(#s-glow-xs)"/>
+          <circle cx="320" cy="452" r="3" fill="#00d4ff" opacity="0.65" filter="url(#s-glow-xs)"/>
+          <rect x="232" y="400" width="48" height="32" rx="4" fill="#0c1c2c" stroke="#00d4ff" stroke-width="1.2" opacity="0.8"/>
+          <circle cx="241" cy="413" r="5.5" fill="#142030" stroke="#00d4ff" stroke-width="1.5" opacity="0.85"/>
+          <circle cx="271" cy="413" r="5.5" fill="#142030" stroke="#00d4ff" stroke-width="1.5" opacity="0.85"/>
+          <circle cx="241" cy="413" r="2" fill="#00d4ff" opacity="0.5" filter="url(#s-glow-xs)"/>
+          <circle cx="271" cy="413" r="2" fill="#00d4ff" opacity="0.5" filter="url(#s-glow-xs)"/>
+          <circle cx="256" cy="294" r="116" fill="url(#s-face-grad)"/>
+          <circle cx="256" cy="294" r="116" fill="none" stroke="#00d4ff" stroke-width="2.2" opacity="0.7" filter="url(#s-glow-xs)"/>
+          <rect x="133" y="265" width="14" height="34" rx="3" fill="#0a1828" stroke="#00d4ff" stroke-width="1.2" opacity="0.75"/>
+          <line x1="134" y1="271" x2="146" y2="271" stroke="#00d4ff" stroke-width="1" opacity="0.55"/>
+          <line x1="134" y1="277" x2="146" y2="277" stroke="#00d4ff" stroke-width="1" opacity="0.55"/>
+          <line x1="134" y1="283" x2="146" y2="283" stroke="#00d4ff" stroke-width="1" opacity="0.55"/>
+          <line x1="134" y1="289" x2="146" y2="289" stroke="#00d4ff" stroke-width="1" opacity="0.55"/>
+          <rect x="365" y="265" width="14" height="34" rx="3" fill="#0a1828" stroke="#00d4ff" stroke-width="1.2" opacity="0.75"/>
+          <line x1="366" y1="271" x2="378" y2="271" stroke="#00d4ff" stroke-width="1" opacity="0.55"/>
+          <line x1="366" y1="277" x2="378" y2="277" stroke="#00d4ff" stroke-width="1" opacity="0.55"/>
+          <line x1="366" y1="283" x2="378" y2="283" stroke="#00d4ff" stroke-width="1" opacity="0.55"/>
+          <line x1="366" y1="289" x2="378" y2="289" stroke="#00d4ff" stroke-width="1" opacity="0.55"/>
+          <circle cx="208" cy="282" r="37" fill="#001a0e" stroke="#00bb55" stroke-width="2" opacity="0.95"/>
+          <circle cx="208" cy="282" r="37" fill="none" stroke="#00ff88" stroke-width="2" filter="url(#s-glow-sm)" opacity="0.55"/>
+          <circle cx="208" cy="282" r="27" fill="url(#s-eye-green)" opacity="0.92"/>
+          <circle cx="208" cy="282" r="13" fill="#001a08"/>
+          <circle cx="208" cy="282" r="7" fill="#00ff88" filter="url(#s-glow-md)" opacity="0.92"/>
+          <circle cx="208" cy="282" r="20" fill="none" stroke="#00ff88" stroke-width="0.9" opacity="0.32"/>
+          <ellipse cx="197" cy="271" rx="8" ry="5.5" fill="white" opacity="0.42" transform="rotate(-18,197,271)"/>
+          <circle cx="304" cy="282" r="37" fill="#000d20" stroke="#0099cc" stroke-width="2" opacity="0.95"/>
+          <circle cx="304" cy="282" r="37" fill="none" stroke="#00d4ff" stroke-width="2" filter="url(#s-glow-sm)" opacity="0.55"/>
+          <circle cx="304" cy="282" r="27" fill="url(#s-eye-blue)" opacity="0.92"/>
+          <circle cx="304" cy="282" r="13" fill="#001020"/>
+          <circle cx="304" cy="282" r="7" fill="#44ddff" filter="url(#s-glow-md)" opacity="0.92"/>
+          <ellipse cx="293" cy="271" rx="8" ry="5.5" fill="white" opacity="0.42" transform="rotate(-18,293,271)"/>
+          <circle cx="308" cy="286" r="49" fill="none" stroke="#ffd700" stroke-width="3.5" opacity="0.95" filter="url(#s-glow-xs)"/>
+          <line x1="308" y1="241" x2="308" y2="256" stroke="#ffd700" stroke-width="1.5" opacity="0.55"/>
+          <line x1="308" y1="316" x2="308" y2="331" stroke="#ffd700" stroke-width="1.5" opacity="0.55"/>
+          <line x1="263" y1="286" x2="278" y2="286" stroke="#ffd700" stroke-width="1.5" opacity="0.55"/>
+          <line x1="338" y1="286" x2="353" y2="286" stroke="#ffd700" stroke-width="1.5" opacity="0.55"/>
+          <path d="M 351 308 Q 372 332 370 358 Q 368 380 356 396" stroke="#ffd700" stroke-width="2.8" fill="none" opacity="0.78" filter="url(#s-glow-xs)"/>
+          <circle cx="356" cy="314" r="2.8" fill="#ffd700" opacity="0.65"/>
+          <circle cx="364" cy="333" r="2.8" fill="#ffd700" opacity="0.65"/>
+          <circle cx="368" cy="353" r="2.8" fill="#ffd700" opacity="0.65"/>
+          <circle cx="361" cy="374" r="2.8" fill="#ffd700" opacity="0.65"/>
+          <rect x="248" y="322" width="16" height="20" rx="4" fill="#0c1e2e" stroke="#00d4ff" stroke-width="1" opacity="0.72"/>
+          <circle cx="256" cy="336" r="4.5" fill="#00d4ff" opacity="0.6" filter="url(#s-glow-xs)"/>
+          <rect x="187" y="358" width="13" height="8" rx="2.5" fill="#00d4ff" filter="url(#s-glow-xs)" opacity="0.88"/>
+          <rect x="205" y="366" width="13" height="8" rx="2.5" fill="#00d4ff" filter="url(#s-glow-xs)" opacity="0.9"/>
+          <rect x="223" y="371" width="13" height="8" rx="2.5" fill="#00d4ff" filter="url(#s-glow-xs)" opacity="0.92"/>
+          <rect x="241" y="374" width="14" height="8" rx="2.5" fill="#00d4ff" filter="url(#s-glow-xs)" opacity="0.92"/>
+          <rect x="257" y="374" width="14" height="8" rx="2.5" fill="#00d4ff" filter="url(#s-glow-xs)" opacity="0.92"/>
+          <rect x="275" y="371" width="13" height="8" rx="2.5" fill="#00d4ff" filter="url(#s-glow-xs)" opacity="0.92"/>
+          <rect x="293" y="366" width="13" height="8" rx="2.5" fill="#00d4ff" filter="url(#s-glow-xs)" opacity="0.9"/>
+          <rect x="311" y="358" width="13" height="8" rx="2.5" fill="#00d4ff" filter="url(#s-glow-xs)" opacity="0.88"/>
+          <rect x="126" y="44" width="260" height="152" rx="9" fill="url(#s-hat-grad)"/>
+          <rect x="126" y="44" width="260" height="152" rx="9" fill="none" stroke="#00d4ff" stroke-width="2.5" opacity="0.82" filter="url(#s-glow-xs)"/>
+          <ellipse cx="256" cy="44" rx="130" ry="7" fill="#1c2e46" stroke="#00d4ff" stroke-width="1.5" opacity="0.72"/>
+          <text x="256" y="167" text-anchor="middle" font-family="Georgia, serif" font-size="98" font-weight="bold" fill="#00d4ff" opacity="0.82" filter="url(#s-glow-md)">$</text>
+          <rect x="126" y="172" width="260" height="24" fill="#00d4ff" opacity="0.07"/>
+          <line x1="126" y1="172" x2="386" y2="172" stroke="#00d4ff" stroke-width="1.8" opacity="0.78"/>
+          <line x1="126" y1="196" x2="386" y2="196" stroke="#00d4ff" stroke-width="1.8" opacity="0.78"/>
+          <circle cx="152" cy="184" r="4" fill="#00ff88" opacity="0.9" filter="url(#s-glow-xs)"/>
+          <circle cx="176" cy="184" r="4" fill="#00d4ff" opacity="0.9" filter="url(#s-glow-xs)"/>
+          <circle cx="200" cy="184" r="4" fill="#7b2fff" opacity="0.9" filter="url(#s-glow-xs)"/>
+          <circle cx="224" cy="184" r="4" fill="#00d4ff" opacity="0.9" filter="url(#s-glow-xs)"/>
+          <circle cx="248" cy="184" r="4" fill="#00d4ff" opacity="0.9" filter="url(#s-glow-xs)"/>
+          <circle cx="272" cy="184" r="4" fill="#7b2fff" opacity="0.9" filter="url(#s-glow-xs)"/>
+          <circle cx="296" cy="184" r="4" fill="#00d4ff" opacity="0.9" filter="url(#s-glow-xs)"/>
+          <circle cx="320" cy="184" r="4" fill="#00d4ff" opacity="0.9" filter="url(#s-glow-xs)"/>
+          <circle cx="344" cy="184" r="4" fill="#00ff88" opacity="0.9" filter="url(#s-glow-xs)"/>
+          <circle cx="368" cy="184" r="4" fill="#00d4ff" opacity="0.9" filter="url(#s-glow-xs)"/>
+          <ellipse cx="256" cy="198" rx="158" ry="17" fill="#0f1e30" stroke="#00d4ff" stroke-width="2.2" opacity="0.9"/>
+          <ellipse cx="256" cy="198" rx="158" ry="17" fill="none" stroke="#00d4ff" stroke-width="2.2" filter="url(#s-glow-sm)" opacity="0.5"/>
+          <circle cx="208" cy="282" r="55" fill="#00ff88" opacity="0.022" filter="url(#s-glow-lg)"/>
+          <circle cx="304" cy="282" r="55" fill="#00aaff" opacity="0.022" filter="url(#s-glow-lg)"/>
+        </g>
+        <circle cx="256" cy="256" r="248" fill="none" stroke="#00d4ff" stroke-width="3" opacity="0.82" filter="url(#s-glow-sm)"/>
+        <circle cx="256" cy="256" r="251" fill="none" stroke="#003355" stroke-width="1.5" opacity="0.55"/>
+      </svg>
+    </div>
+
+    <!-- Text -->
+    <div class="app-name">Polsa</div>
+    <div class="tagline">Personal Finance</div>
+
+    <!-- Loading indicator -->
+    <div class="dots">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+
+    <div class="version">v0.1.0</div>
+  </div>
+</body>
+</html>

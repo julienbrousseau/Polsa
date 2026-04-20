@@ -29,7 +29,18 @@ interface QifTransaction {
   subcategory: string | null;
 }
 
+function normalizeCategoryName(value: string): string {
+  return value.trim().replace(/\s+/g, ' ');
+}
+
 function parseQifDate(raw: string, format: QifDateFormat): string {
+  // Accept ISO 8601 dates directly (e.g. 2025-12-13).
+  const isoMatch = raw.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    return `${year.padStart(4, '0')}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+
   // Normalise separators
   const cleaned = raw.replace(/[/\-.']/g, '/');
   const parts = cleaned.split('/');
@@ -60,7 +71,7 @@ function parseQifAmount(raw: string): number {
   return Math.round(value * 100);
 }
 
-function parseQifFile(content: string, dateFormat: QifDateFormat): QifTransaction[] {
+function parseQifFile(content: string, dateFormat: QifDateFormat = 'MM/DD/YYYY'): QifTransaction[] {
   const lines = content.split(/\r?\n/);
   const transactions: QifTransaction[] = [];
   let current: Partial<QifTransaction> = {};
@@ -88,10 +99,15 @@ function parseQifFile(content: string, dateFormat: QifDateFormat): QifTransactio
       case 'L': // Category
         if (value.includes(':')) {
           const [cat, sub] = value.split(':', 2);
-          current.category = cat.trim();
-          current.subcategory = sub.trim();
+          current.category = normalizeCategoryName(cat);
+          current.subcategory = normalizeCategoryName(sub) || null;
+        } else if (value.includes('/')) {
+          const [cat, ...subParts] = value.split('/');
+          const sub = normalizeCategoryName(subParts.join('/'));
+          current.category = normalizeCategoryName(cat);
+          current.subcategory = sub || null;
         } else {
-          current.category = value.trim();
+          current.category = normalizeCategoryName(value);
           current.subcategory = null;
         }
         break;
@@ -127,7 +143,7 @@ export function importQif(input: QifImportInput): QifImportResult {
 
   // Read and parse file
   const content = fs.readFileSync(input.filePath, 'utf-8');
-  const parsed = parseQifFile(content, input.dateFormat);
+  const parsed = parseQifFile(content);
 
   const createdCategoriesSet = new Set<string>();
 
@@ -136,6 +152,7 @@ export function importQif(input: QifImportInput): QifImportResult {
     let imported = 0;
 
     for (const tx of parsed) {
+      let categoryId: number | null = null;
       let subcategoryId: number | null = null;
 
       if (tx.category) {
@@ -146,6 +163,7 @@ export function importQif(input: QifImportInput): QifImportResult {
           catRow = { id: result.lastInsertRowid as number };
           createdCategoriesSet.add(tx.category);
         }
+        categoryId = catRow.id;
 
         if (tx.subcategory) {
           // Find or create subcategory
@@ -156,13 +174,14 @@ export function importQif(input: QifImportInput): QifImportResult {
             createdCategoriesSet.add(`${tx.category}:${tx.subcategory}`);
           }
           subcategoryId = subRow.id;
+          categoryId = null;
         }
       }
 
       db.prepare(`
-        INSERT INTO transactions (account_id, date, amount, subcategory_id, description)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(input.accountId, tx.date, tx.amount, subcategoryId, tx.description);
+        INSERT INTO transactions (account_id, date, amount, category_id, subcategory_id, description)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(input.accountId, tx.date, tx.amount, categoryId, subcategoryId, tx.description);
 
       imported++;
     }
@@ -217,10 +236,12 @@ export function exportQif(input: QifExportInput): QifExportResult {
 
   const rows = db.prepare(`
     SELECT t.date, t.amount, t.description,
-           s.name as subcategory_name, c.name as category_name
+           s.name as subcategory_name,
+           COALESCE(c_sub.name, c_dir.name) as category_name
     FROM transactions t
     LEFT JOIN subcategories s ON s.id = t.subcategory_id
-    LEFT JOIN categories c ON c.id = s.category_id
+    LEFT JOIN categories c_sub ON c_sub.id = s.category_id
+    LEFT JOIN categories c_dir ON c_dir.id = t.category_id
     ${whereClause}
     ORDER BY t.date ASC, t.id ASC
   `).all(...params) as Array<{

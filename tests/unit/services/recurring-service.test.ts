@@ -29,11 +29,12 @@ function setupTestDb(): Database.Database {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
 
-  const m1 = path.join(__dirname, '../../../src/main/migrations/001_initial.sql');
-  db.exec(fs.readFileSync(m1, 'utf-8'));
-
-  const m2 = path.join(__dirname, '../../../src/main/migrations/002_recurring.sql');
-  db.exec(fs.readFileSync(m2, 'utf-8'));
+  const migrationsDir = path.join(__dirname, '../../../src/main/migrations');
+  const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
+  for (const file of files) {
+    const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf-8');
+    db.exec(sql);
+  }
 
   return db;
 }

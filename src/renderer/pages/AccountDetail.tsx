@@ -18,7 +18,6 @@ export default function AccountDetail() {
   const [categories, setCategories] = useState<CategoryWithSubs[]>([]);
   const [editingTx, setEditingTx] = useState<TransactionDisplay | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [showImport, setShowImport] = useState(false);
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -87,7 +86,7 @@ export default function AccountDetail() {
     await Promise.all([loadAccount(), loadTransactions()]);
   };
 
-  const handleInlineAdd = async (tx: { date: string; amount: number; subcategoryId: number | null; description: string }) => {
+  const handleInlineAdd = async (tx: { date: string; amount: number; categoryId: number | null; subcategoryId: number | null; description: string }) => {
     await window.polsa.transactions.create({
       accountId,
       ...tx,
@@ -95,7 +94,7 @@ export default function AccountDetail() {
     await refreshAll();
   };
 
-  const handleFormSave = async (tx: { id?: number; date: string; amount: number; subcategoryId: number | null; description: string }) => {
+  const handleFormSave = async (tx: { id?: number; date: string; amount: number; categoryId: number | null; subcategoryId: number | null; description: string }) => {
     if (tx.id) {
       await window.polsa.transactions.update(tx);
     } else {
@@ -109,12 +108,12 @@ export default function AccountDetail() {
     await refreshAll();
   };
 
-  const handleImport = async (dateFormat: 'MM/DD/YYYY' | 'DD/MM/YYYY') => {
+  const handleImport = async () => {
     try {
       const filePath = await window.polsa.qif.pickImportFile();
       if (!filePath) return;
       setImportStatus('Importing…');
-      const result = await window.polsa.qif.import({ accountId, filePath, dateFormat });
+      const result = await window.polsa.qif.import({ accountId, filePath });
       setImportStatus(`Imported ${result.imported} transaction${result.imported !== 1 ? 's' : ''}`);
       await refreshAll();
       await loadCategories();
@@ -123,7 +122,6 @@ export default function AccountDetail() {
       setImportStatus(`Error: ${e.message}`);
       setTimeout(() => setImportStatus(null), 5000);
     }
-    setShowImport(false);
   };
 
   const handleExport = async () => {
@@ -180,7 +178,7 @@ export default function AccountDetail() {
         </div>
         <div className="flex gap-1.5">
           <button
-            onClick={() => setShowImport(true)}
+            onClick={handleImport}
             className="btn-ghost rounded-lg px-3 py-1.5 text-xs"
           >
             Import
@@ -217,32 +215,6 @@ export default function AccountDetail() {
         </div>
       )}
 
-      {/* Import date format picker modal */}
-      {showImport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md" onClick={() => setShowImport(false)}>
-          <div className="glass-strong w-full max-w-sm rounded-2xl p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <h2 className="mb-4 text-sm font-bold uppercase tracking-wide neon-text-subtle text-[var(--color-accent-light)]">Import QIF</h2>
-            <p className="mb-4 text-xs text-[var(--color-text-muted)]">
-              Select the date format used in the QIF file:
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleImport('DD/MM/YYYY')}
-                className="btn-neon flex-1 rounded-xl px-4 py-3 text-xs font-semibold tracking-wide font-mono"
-              >
-                DD/MM/YYYY
-              </button>
-              <button
-                onClick={() => handleImport('MM/DD/YYYY')}
-                className="btn-ghost flex-1 rounded-xl px-4 py-3 text-xs font-mono"
-              >
-                MM/DD/YYYY
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Transaction table */}
       <div
         ref={scrollRef}
@@ -252,6 +224,7 @@ export default function AccountDetail() {
         <table className="w-full">
           <thead className="sticky top-0 z-10 bg-[var(--color-bg-deep)]/90 backdrop-blur-md">
             <tr className="border-b border-[var(--color-accent)]/10 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+              <th className="px-3 py-2.5 w-6" title="Reconciled"></th>
               <th className="px-3 py-2.5 w-24">Date</th>
               <th className="px-3 py-2.5">Description</th>
               <th className="px-3 py-2.5 w-40">Category</th>
