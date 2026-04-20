@@ -5,6 +5,8 @@ import AccountDetail from './pages/AccountDetail';
 import AccountForm from './pages/AccountForm';
 import Categories from './pages/Categories';
 import CategoryDetail from './pages/CategoryDetail';
+import RecurringList from './pages/RecurringList';
+import RecurringForm from './pages/RecurringForm';
 
 export default function App() {
   return (
@@ -16,6 +18,9 @@ export default function App() {
         <Route path="/accounts/:id/edit" element={<AccountForm />} />
         <Route path="/categories" element={<Categories />} />
         <Route path="/categories/:id" element={<CategoryDetail />} />
+        <Route path="/recurring" element={<RecurringList />} />
+        <Route path="/recurring/new" element={<RecurringForm />} />
+        <Route path="/recurring/:id/edit" element={<RecurringForm />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

@@ -118,3 +118,39 @@ export interface QifExportInput {
 export interface QifExportResult {
   exported: number;
 }
+
+// Recurring transactions
+
+export type RecurrenceFrequency = 'daily' | 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'yearly';
+
+export interface RecurringTransaction {
+  id: number;
+  accountId: number;
+  accountName: string;
+  description: string;
+  amount: number;
+  subcategoryId: number | null;
+  categoryName: string | null;
+  subcategoryName: string | null;
+  frequency: RecurrenceFrequency;
+  nextDate: string;
+  active: boolean;
+}
+
+export interface CreateRecurringInput {
+  accountId: number;
+  description: string;
+  amount: number;
+  subcategoryId?: number;
+  frequency: RecurrenceFrequency;
+  nextDate: string;
+}
+
+export interface UpdateRecurringInput {
+  id: number;
+  description?: string;
+  amount?: number;
+  subcategoryId?: number | null;
+  frequency?: RecurrenceFrequency;
+  nextDate?: string;
+}

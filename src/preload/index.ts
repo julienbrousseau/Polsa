@@ -39,6 +39,17 @@ export interface PolsaAPI {
     pickImportFile: () => Promise<string | null>;
     pickExportFile: () => Promise<string | null>;
   };
+  // Recurring
+  recurring: {
+    list: () => Promise<any[]>;
+    get: (id: number) => Promise<any>;
+    create: (input: any) => Promise<any>;
+    update: (input: any) => Promise<any>;
+    cancel: (id: number) => Promise<void>;
+    reactivate: (id: number) => Promise<any>;
+    delete: (id: number) => Promise<void>;
+    applyOverdue: () => Promise<{ applied: number }>;
+  };
 }
 
 const api: PolsaAPI = {
@@ -72,6 +83,16 @@ const api: PolsaAPI = {
     export: (input) => ipcRenderer.invoke('qif:export', input),
     pickImportFile: () => ipcRenderer.invoke('qif:pick-import-file'),
     pickExportFile: () => ipcRenderer.invoke('qif:pick-export-file'),
+  },
+  recurring: {
+    list: () => ipcRenderer.invoke('recurring:list'),
+    get: (id) => ipcRenderer.invoke('recurring:get', id),
+    create: (input) => ipcRenderer.invoke('recurring:create', input),
+    update: (input) => ipcRenderer.invoke('recurring:update', input),
+    cancel: (id) => ipcRenderer.invoke('recurring:cancel', id),
+    reactivate: (id) => ipcRenderer.invoke('recurring:reactivate', id),
+    delete: (id) => ipcRenderer.invoke('recurring:delete', id),
+    applyOverdue: () => ipcRenderer.invoke('recurring:applyOverdue'),
   },
 };
 

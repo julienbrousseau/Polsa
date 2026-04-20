@@ -7,6 +7,8 @@ import { registerAccountHandlers } from './ipc/accounts';
 import { registerCategoryHandlers } from './ipc/categories';
 import { registerTransactionHandlers } from './ipc/transactions';
 import { registerQifHandlers } from './ipc/qif';
+import { registerRecurringHandlers } from './ipc/recurring';
+import { applyOverdue } from './services/recurring-service';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -45,6 +47,14 @@ app.whenReady().then(() => {
   registerCategoryHandlers();
   registerTransactionHandlers();
   registerQifHandlers();
+  registerRecurringHandlers();
+
+  // Apply overdue recurring payments before showing UI
+  const { applied } = applyOverdue();
+  if (applied > 0) {
+    console.log(`Applied ${applied} overdue recurring payment(s)`);
+  }
+
   createWindow();
 
   app.on('activate', () => {

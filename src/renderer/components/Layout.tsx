@@ -145,10 +145,31 @@ export default function Layout({ children }: LayoutProps) {
             )}
           </Link>
 
-          {/* Separator — neon line */}
-          <div className="my-4 h-px bg-gradient-to-r from-transparent via-[var(--color-accent)]/20 to-transparent" />
+          {/* Recurring link */}
+          <Link
+            to="/recurring"
+            className={`mt-1 flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs transition-all duration-200 ${
+              location.pathname.startsWith('/recurring')
+                ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent-light)] neon-border'
+                : 'text-[var(--color-text-primary)] hover:bg-[var(--color-accent)]/5 hover:text-[var(--color-accent-light)]'
+            }`}
+            title={collapsed ? 'Recurring' : undefined}
+          >
+            {collapsed ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span className="font-medium">Recurring</span>
+              </>
+            )}
+          </Link>
 
-          {/* New account button */}
+          {/* Separator — neon line */}
           <button
             onClick={() => navigate('/accounts/new')}
             className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-[var(--color-text-muted)] transition-all duration-200 hover:bg-[var(--color-neon-pink)]/5 hover:text-[var(--color-neon-pink)]"

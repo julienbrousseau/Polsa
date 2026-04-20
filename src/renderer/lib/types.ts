@@ -16,4 +16,8 @@ export type {
   UpdateTransactionInput,
   TransactionListInput,
   CategoryTransactionInput,
+  RecurrenceFrequency,
+  RecurringTransaction,
+  CreateRecurringInput,
+  UpdateRecurringInput,
 } from '@shared/types';

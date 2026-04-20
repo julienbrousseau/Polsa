@@ -1,7 +1,7 @@
 // src/shared/validation.ts
 
-import { ACCOUNT_TYPES } from './constants';
-import type { AccountType } from './types';
+import { ACCOUNT_TYPES, RECURRENCE_FREQUENCIES } from './constants';
+import type { AccountType, RecurrenceFrequency } from './types';
 
 export function isValidAccountType(value: string): value is AccountType {
   return (ACCOUNT_TYPES as readonly string[]).includes(value);
@@ -47,4 +47,8 @@ export function validateTransactionDate(date: unknown): string | null {
     return 'Date must be a valid ISO date (YYYY-MM-DD)';
   }
   return null;
+}
+
+export function isValidFrequency(value: string): value is RecurrenceFrequency {
+  return (RECURRENCE_FREQUENCIES as readonly string[]).includes(value);
 }
