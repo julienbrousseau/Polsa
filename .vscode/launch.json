@@ -1,0 +1,42 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug: Vite Dev Server",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "presentation": { "hidden": true }
+    },
+    {
+      "name": "Debug: Electron Main",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron",
+      "args": ["."],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "POLSA_DEV_DB": "1"
+      },
+      "preLaunchTask": "build:main & wait-vite",
+      "outFiles": ["${workspaceFolder}/dist/main/**/*.js"],
+      "sourceMaps": true,
+      "console": "integratedTerminal",
+      "presentation": { "hidden": true }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug Polsa (F5)",
+      "configurations": ["Debug: Vite Dev Server", "Debug: Electron Main"],
+      "stopAll": true,
+      "presentation": {
+        "order": 1
+      }
+    }
+  ]
+}

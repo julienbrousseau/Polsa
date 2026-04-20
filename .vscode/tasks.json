@@ -1,0 +1,45 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build:main",
+      "type": "npm",
+      "script": "build:main",
+      "problemMatcher": ["$tsc"],
+      "presentation": { "reveal": "silent" }
+    },
+    {
+      "label": "wait-vite",
+      "type": "shell",
+      "command": "npx wait-on http://localhost:5173 -t 15000",
+      "presentation": { "reveal": "silent" }
+    },
+    {
+      "label": "prepare:electron",
+      "dependsOn": ["rebuild:electron", "build:main"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    },
+    {
+      "label": "build:main & wait-vite",
+      "dependsOn": ["prepare:electron", "wait-vite"],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    },
+    {
+      "label": "rebuild:electron",
+      "type": "shell",
+      "command": "npx electron-rebuild -f -w better-sqlite3",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always" }
+    },
+    {
+      "label": "Package for macOS",
+      "type": "shell",
+      "command": "npx electron-rebuild -f -w better-sqlite3 && npm run build && npx electron-builder --mac",
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always" }
+    }
+  ]
+}

@@ -58,6 +58,10 @@ The budget screen should allow me to see the total amount allocated for the curr
 
 ### Stats and reporting
 
+TODO
+I want a few important stats:
+
+
 ## UI / UX
 
 Style is slick, modern, cybernetics, dark blue tones UI

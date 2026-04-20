@@ -9,7 +9,9 @@ let db: Database.Database | null = null;
 
 export function getDbPath(): string {
   const userDataPath = app.getPath('userData');
-  return path.join(userDataPath, 'polsa.db');
+  // Use a separate dev database when POLSA_DEV_DB is set
+  const filename = process.env.POLSA_DEV_DB ? 'polsa-dev.db' : 'polsa.db';
+  return path.join(userDataPath, filename);
 }
 
 export function getDb(): Database.Database {
