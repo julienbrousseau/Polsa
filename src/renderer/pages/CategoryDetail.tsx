@@ -90,14 +90,14 @@ export default function CategoryDetail() {
     <div className="flex h-full flex-col">
       <div className="mb-4 flex items-center justify-between flex-shrink-0">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--color-text-primary)]">{title}</h1>
-          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-            {total} transaction{total !== 1 ? 's' : ''} across all accounts
+          <h1 className="text-sm font-bold uppercase tracking-[0.15em] neon-text-subtle text-[var(--color-accent-light)]">{title}</h1>
+          <p className="mt-1 text-[10px] text-[var(--color-text-muted)]">
+            {total} txn{total !== 1 ? 's' : ''} across all accounts
           </p>
         </div>
         <button
           onClick={() => navigate('/categories')}
-          className="rounded-lg bg-[var(--color-bg-surface-hover)] px-4 py-2 text-sm text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-border-glass)]"
+          className="btn-ghost rounded-lg px-3 py-1.5 text-xs"
         >
           Back
         </button>
@@ -106,15 +106,15 @@ export default function CategoryDetail() {
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="glass-strong flex-1 overflow-auto rounded-xl"
+        className="glass-strong flex-1 overflow-auto rounded-2xl"
       >
         <table className="w-full">
-          <thead className="sticky top-0 z-10 bg-[var(--color-bg-surface)]/90 backdrop-blur-sm">
-            <tr className="border-b border-white/10 text-left text-xs font-medium uppercase tracking-wider text-[var(--color-text-secondary)]">
-              <th className="px-3 py-3 w-28">Date</th>
-              <th className="px-3 py-3">Description</th>
-              <th className="px-3 py-3 w-32">Account</th>
-              <th className="px-3 py-3 w-28 text-right">Amount</th>
+          <thead className="sticky top-0 z-10 bg-[var(--color-bg-deep)]/90 backdrop-blur-md">
+            <tr className="border-b border-[var(--color-accent)]/10 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+              <th className="px-3 py-2.5 w-24">Date</th>
+              <th className="px-3 py-2.5">Description</th>
+              <th className="px-3 py-2.5 w-28">Account</th>
+              <th className="px-3 py-2.5 w-24 text-right">Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -122,19 +122,19 @@ export default function CategoryDetail() {
               <tr
                 key={tx.id}
                 onClick={() => navigate(`/accounts/${tx.accountId}`)}
-                className="cursor-pointer border-b border-white/5 transition-colors hover:bg-white/5"
+                className="cursor-pointer border-b border-[var(--color-accent)]/5 transition-colors hover:bg-[var(--color-accent)]/5"
               >
-                <td className="whitespace-nowrap px-3 py-2.5 text-sm text-[var(--color-text-secondary)]">
+                <td className="whitespace-nowrap px-3 py-2 text-xs font-mono text-[var(--color-text-muted)]">
                   {formatDate(tx.date)}
                 </td>
-                <td className="px-3 py-2.5 text-sm text-[var(--color-text-primary)]">
-                  {tx.description || <span className="italic text-[var(--color-text-secondary)]">—</span>}
+                <td className="px-3 py-2 text-xs text-[var(--color-text-primary)]">
+                  {tx.description || <span className="italic text-[var(--color-text-muted)]">—</span>}
                 </td>
-                <td className="px-3 py-2.5 text-sm text-[var(--color-text-secondary)]">
+                <td className="px-3 py-2 text-xs text-[var(--color-text-muted)]">
                   {/* Account name would need to be in the data — for now show account ID */}
                 </td>
                 <td
-                  className={`whitespace-nowrap px-3 py-2.5 text-right text-sm font-medium ${
+                  className={`whitespace-nowrap px-3 py-2 text-right text-xs font-mono font-medium ${
                     tx.amount >= 0 ? 'text-[var(--color-positive)]' : 'text-[var(--color-negative)]'
                   }`}
                 >
@@ -144,7 +144,7 @@ export default function CategoryDetail() {
             ))}
             {transactions.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-3 py-8 text-center text-sm text-[var(--color-text-secondary)]">
+                <td colSpan={4} className="px-3 py-8 text-center text-xs text-[var(--color-text-muted)]">
                   No transactions in this category.
                 </td>
               </tr>
@@ -153,7 +153,7 @@ export default function CategoryDetail() {
         </table>
 
         {loadingMore && (
-          <div className="py-4 text-center text-sm text-[var(--color-text-secondary)]">
+          <div className="py-3 text-center text-xs text-[var(--color-text-muted)]">
             Loading more…
           </div>
         )}

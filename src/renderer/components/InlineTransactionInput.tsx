@@ -47,7 +47,7 @@ export default function InlineTransactionInput({ accountId, categories, onSave }
   };
 
   return (
-    <tr className="border-b border-white/10 bg-white/[0.03]">
+    <tr className="border-b border-[var(--color-accent)]/10 bg-[var(--color-accent)]/[0.03]">
       <td className="px-3 py-2">
         <input
           ref={dateRef}
@@ -55,7 +55,7 @@ export default function InlineTransactionInput({ accountId, categories, onSave }
           value={date}
           onChange={(e) => setDate(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="w-full rounded bg-white/5 border border-white/10 px-2 py-1.5 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent)] focus:outline-none [color-scheme:dark]"
+          className="input-cyber w-full rounded-lg px-2 py-1.5 text-xs [color-scheme:dark]"
         />
       </td>
       <td className="px-3 py-2">
@@ -65,7 +65,7 @@ export default function InlineTransactionInput({ accountId, categories, onSave }
           onChange={(e) => setDescription(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Description"
-          className="w-full rounded bg-white/5 border border-white/10 px-2 py-1.5 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-secondary)] focus:border-[var(--color-accent)] focus:outline-none"
+          className="input-cyber w-full rounded-lg px-2 py-1.5 text-xs"
         />
       </td>
       <td className="px-3 py-2">
@@ -73,7 +73,7 @@ export default function InlineTransactionInput({ accountId, categories, onSave }
           value={subcategoryId ?? ''}
           onChange={(e) => setSubcategoryId(e.target.value ? Number(e.target.value) : null)}
           onKeyDown={handleKeyDown}
-          className="w-full rounded bg-white/5 border border-white/10 px-2 py-1.5 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent)] focus:outline-none [color-scheme:dark]"
+          className="input-cyber w-full rounded-lg px-2 py-1.5 text-xs [color-scheme:dark]"
         >
           <option value="">No category</option>
           {categories.map((cat) => (
@@ -95,14 +95,14 @@ export default function InlineTransactionInput({ accountId, categories, onSave }
           onChange={(e) => setAmountStr(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="0.00"
-          className="w-full rounded bg-white/5 border border-white/10 px-2 py-1.5 text-right text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-secondary)] focus:border-[var(--color-accent)] focus:outline-none"
+          className="input-cyber w-full rounded-lg px-2 py-1.5 text-right text-xs font-mono"
         />
       </td>
       <td className="px-3 py-2 text-right">
         <button
           onClick={handleSubmit}
           disabled={saving || !amountStr}
-          className="rounded bg-[var(--color-accent)] px-3 py-1.5 text-xs font-medium text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-40 transition-colors"
+          className="btn-neon rounded-lg px-3 py-1.5 text-xs font-semibold tracking-wide"
         >
           {saving ? '…' : 'Add'}
         </button>

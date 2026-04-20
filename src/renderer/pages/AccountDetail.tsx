@@ -160,46 +160,46 @@ export default function AccountDetail() {
       {/* Header */}
       <div className="mb-4 flex items-center justify-between flex-shrink-0">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--color-text-primary)]">
+          <h1 className="text-base font-bold tracking-wide uppercase neon-text-subtle text-[var(--color-accent-light)]">
             {account.name}
           </h1>
-          <div className="mt-1 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
+          <div className="mt-1 flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
             <span className="capitalize">{account.type}</span>
-            <span>·</span>
+            <span className="text-[var(--color-accent)]/30">·</span>
             <span
-              className={
+              className={`font-mono font-medium ${
                 account.currentBalance >= 0
                   ? 'text-[var(--color-positive)]'
                   : 'text-[var(--color-negative)]'
-              }
+              }`}
             >
               {formatMoney(account.currentBalance)}
             </span>
-            <span className="text-xs">({total} transactions)</span>
+            <span className="text-[10px]">({total} txns)</span>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           <button
             onClick={() => setShowImport(true)}
-            className="rounded-lg bg-[var(--color-bg-surface-hover)] px-3 py-2 text-sm text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-border-glass)]"
+            className="btn-ghost rounded-lg px-3 py-1.5 text-xs"
           >
             Import
           </button>
           <button
             onClick={handleExport}
-            className="rounded-lg bg-[var(--color-bg-surface-hover)] px-3 py-2 text-sm text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-border-glass)]"
+            className="btn-ghost rounded-lg px-3 py-1.5 text-xs"
           >
             Export
           </button>
           <button
             onClick={() => { setEditingTx(null); setShowForm(true); }}
-            className="rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-accent-hover)] transition-colors"
+            className="btn-neon rounded-lg px-3 py-1.5 text-xs font-semibold tracking-wide"
           >
             + Transaction
           </button>
           <button
             onClick={() => navigate(`/accounts/${id}/edit`)}
-            className="rounded-lg bg-[var(--color-bg-surface-hover)] px-4 py-2 text-sm text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-border-glass)]"
+            className="btn-ghost rounded-lg px-3 py-1.5 text-xs"
           >
             Edit
           </button>
@@ -208,10 +208,10 @@ export default function AccountDetail() {
 
       {/* Status message */}
       {importStatus && (
-        <div className={`mb-3 rounded-lg px-4 py-2 text-sm flex-shrink-0 ${
+        <div className={`mb-3 rounded-lg px-4 py-2 text-xs flex-shrink-0 ${
           importStatus.startsWith('Error') 
-            ? 'bg-red-500/10 border border-red-500/30 text-red-400'
-            : 'bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30 text-[var(--color-accent)]'
+            ? 'bg-[var(--color-negative)]/10 border border-[var(--color-negative)]/20 text-[var(--color-negative)]'
+            : 'bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 text-[var(--color-accent-light)]'
         }`}>
           {importStatus}
         </div>
@@ -219,22 +219,22 @@ export default function AccountDetail() {
 
       {/* Import date format picker modal */}
       {showImport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowImport(false)}>
-          <div className="glass-strong w-full max-w-sm rounded-2xl p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h2 className="mb-4 text-lg font-semibold text-[var(--color-text-primary)]">Import QIF</h2>
-            <p className="mb-4 text-sm text-[var(--color-text-secondary)]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md" onClick={() => setShowImport(false)}>
+          <div className="glass-strong w-full max-w-sm rounded-2xl p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <h2 className="mb-4 text-sm font-bold uppercase tracking-wide neon-text-subtle text-[var(--color-accent-light)]">Import QIF</h2>
+            <p className="mb-4 text-xs text-[var(--color-text-muted)]">
               Select the date format used in the QIF file:
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => handleImport('DD/MM/YYYY')}
-                className="flex-1 rounded-lg bg-[var(--color-accent)] px-4 py-3 text-sm font-medium text-white hover:bg-[var(--color-accent-hover)] transition-colors"
+                className="btn-neon flex-1 rounded-xl px-4 py-3 text-xs font-semibold tracking-wide font-mono"
               >
                 DD/MM/YYYY
               </button>
               <button
                 onClick={() => handleImport('MM/DD/YYYY')}
-                className="flex-1 rounded-lg bg-[var(--color-bg-surface-hover)] px-4 py-3 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-border-glass)] transition-colors"
+                className="btn-ghost flex-1 rounded-xl px-4 py-3 text-xs font-mono"
               >
                 MM/DD/YYYY
               </button>
@@ -247,16 +247,16 @@ export default function AccountDetail() {
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="glass-strong flex-1 overflow-auto rounded-xl"
+        className="glass-strong flex-1 overflow-auto rounded-2xl"
       >
         <table className="w-full">
-          <thead className="sticky top-0 z-10 bg-[var(--color-bg-surface)]/90 backdrop-blur-sm">
-            <tr className="border-b border-white/10 text-left text-xs font-medium uppercase tracking-wider text-[var(--color-text-secondary)]">
-              <th className="px-3 py-3 w-28">Date</th>
-              <th className="px-3 py-3">Description</th>
-              <th className="px-3 py-3 w-44">Category</th>
-              <th className="px-3 py-3 w-28 text-right">Amount</th>
-              <th className="px-3 py-3 w-28 text-right">Balance</th>
+          <thead className="sticky top-0 z-10 bg-[var(--color-bg-deep)]/90 backdrop-blur-md">
+            <tr className="border-b border-[var(--color-accent)]/10 text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+              <th className="px-3 py-2.5 w-24">Date</th>
+              <th className="px-3 py-2.5">Description</th>
+              <th className="px-3 py-2.5 w-40">Category</th>
+              <th className="px-3 py-2.5 w-24 text-right">Amount</th>
+              <th className="px-3 py-2.5 w-24 text-right">Balance</th>
             </tr>
           </thead>
           <tbody>
@@ -277,8 +277,8 @@ export default function AccountDetail() {
 
             {transactions.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-8 text-center text-sm text-[var(--color-text-secondary)]">
-                  No transactions yet. Use the row above to add your first transaction.
+                <td colSpan={5} className="px-3 py-8 text-center text-xs text-[var(--color-text-muted)]">
+                  No transactions yet. Use the row above to add your first.
                 </td>
               </tr>
             )}
@@ -286,7 +286,7 @@ export default function AccountDetail() {
         </table>
 
         {loadingMore && (
-          <div className="py-4 text-center text-sm text-[var(--color-text-secondary)]">
+          <div className="py-3 text-center text-xs text-[var(--color-text-muted)]">
             Loading more…
           </div>
         )}

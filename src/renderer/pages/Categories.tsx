@@ -144,12 +144,12 @@ export default function Categories() {
 
   return (
     <div>
-      <h1 className="mb-6 text-xl font-semibold text-[var(--color-text-primary)]">
+      <h1 className="mb-5 text-sm font-bold uppercase tracking-[0.15em] neon-text-subtle text-[var(--color-accent-light)]">
         Categories
       </h1>
 
       {error && (
-        <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-2 text-sm text-red-400">
+        <div className="mb-4 rounded-lg bg-[var(--color-negative)]/10 border border-[var(--color-negative)]/20 px-4 py-2 text-xs text-[var(--color-negative)]">
           {error}
         </div>
       )}
@@ -163,12 +163,12 @@ export default function Categories() {
           onChange={(e) => setNewCategoryName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleCreateCategory()}
           placeholder="New category name…"
-          className="flex-1 rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-secondary)] focus:border-[var(--color-accent)] focus:outline-none"
+          className="input-cyber flex-1 rounded-lg px-3 py-2 text-xs"
         />
         <button
           onClick={handleCreateCategory}
           disabled={!newCategoryName.trim()}
-          className="rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="btn-neon rounded-lg px-4 py-2 text-xs font-semibold tracking-wide disabled:opacity-30 disabled:cursor-not-allowed"
         >
           Add
         </button>
@@ -177,7 +177,7 @@ export default function Categories() {
       {/* Category list */}
       {categories.length === 0 ? (
         <div className="glass-strong rounded-xl p-8 text-center">
-          <p className="text-[var(--color-text-secondary)]">
+          <p className="text-xs text-[var(--color-text-muted)]">
             No categories yet. Create one above to start organising your transactions.
           </p>
         </div>
@@ -186,10 +186,10 @@ export default function Categories() {
           {categories.map((cat) => (
             <div key={cat.id} className="glass-strong rounded-xl overflow-hidden">
               {/* Category row */}
-              <div className="flex items-center gap-2 px-4 py-3 group">
+              <div className="flex items-center gap-2 px-3 py-2.5 group">
                 <button
                   onClick={() => toggleExpand(cat.id)}
-                  className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors w-5 flex-shrink-0"
+                  className="text-[var(--color-text-muted)] hover:text-[var(--color-accent-light)] transition-colors w-4 flex-shrink-0 text-xs"
                 >
                   <span className={`inline-block transition-transform ${expanded.has(cat.id) ? 'rotate-90' : ''}`}>▸</span>
                 </button>
@@ -205,25 +205,25 @@ export default function Categories() {
                       if (e.key === 'Escape') setEditingCategory(null);
                     }}
                     onBlur={handleRenameCategory}
-                    className="flex-1 rounded bg-white/10 border border-[var(--color-accent)] px-2 py-1 text-sm text-[var(--color-text-primary)] focus:outline-none"
+                    className="flex-1 rounded bg-[var(--color-bg-deep)] border border-[var(--color-accent)]/40 px-2 py-1 text-xs text-[var(--color-text-primary)] focus:outline-none focus:shadow-[0_0_8px_rgba(168,85,247,0.2)]"
                   />
                 ) : (
                   <span
-                    className="flex-1 text-sm font-medium text-[var(--color-text-primary)] cursor-pointer"
+                    className="flex-1 text-xs font-semibold text-[var(--color-text-primary)] cursor-pointer hover:text-[var(--color-accent-light)] transition-colors"
                     onClick={() => navigate(`/categories/${cat.id}`)}
                     onDoubleClick={() => setEditingCategory({ id: cat.id, name: cat.name })}
                   >
                     {cat.name}
-                    <span className="ml-2 text-xs text-[var(--color-text-secondary)]">
+                    <span className="ml-2 text-[10px] text-[var(--color-text-muted)]">
                       ({cat.subcategories.length})
                     </span>
                   </span>
                 )}
 
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => setNewSubName({ categoryId: cat.id, name: '' })}
-                    className="rounded p-1 text-[var(--color-text-secondary)] hover:text-[var(--color-accent)] hover:bg-white/5 transition-colors"
+                    className="rounded p-1 text-[var(--color-text-muted)] hover:text-[var(--color-accent-light)] hover:bg-[var(--color-accent)]/5 transition-colors"
                     title="Add subcategory"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -232,19 +232,19 @@ export default function Categories() {
                   </button>
                   <button
                     onClick={() => setEditingCategory({ id: cat.id, name: cat.name })}
-                    className="rounded p-1 text-[var(--color-text-secondary)] hover:text-[var(--color-accent)] hover:bg-white/5 transition-colors"
+                    className="rounded p-1 text-[var(--color-text-muted)] hover:text-[var(--color-accent-light)] hover:bg-[var(--color-accent)]/5 transition-colors"
                     title="Rename"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                     </svg>
                   </button>
                   <button
                     onClick={() => handleDeleteCategory(cat.id, cat.name)}
-                    className="rounded p-1 text-[var(--color-text-secondary)] hover:text-red-400 hover:bg-white/5 transition-colors"
+                    className="rounded p-1 text-[var(--color-text-muted)] hover:text-[var(--color-negative)] hover:bg-[var(--color-negative)]/5 transition-colors"
                     title="Delete"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </button>
@@ -253,9 +253,9 @@ export default function Categories() {
 
               {/* Subcategories (expanded) */}
               {expanded.has(cat.id) && (
-                <div className="border-t border-white/5 pl-9 pr-4 py-1">
+                <div className="border-t border-[var(--color-accent)]/5 pl-8 pr-3 py-1">
                   {cat.subcategories.map((sub) => (
-                    <div key={sub.id} className="flex items-center gap-2 py-2 group/sub">
+                    <div key={sub.id} className="flex items-center gap-2 py-1.5 group/sub">
                       {editingSub?.id === sub.id ? (
                         <input
                           ref={editSubInputRef}
@@ -267,11 +267,11 @@ export default function Categories() {
                             if (e.key === 'Escape') setEditingSub(null);
                           }}
                           onBlur={handleRenameSubcategory}
-                          className="flex-1 rounded bg-white/10 border border-[var(--color-accent)] px-2 py-1 text-sm text-[var(--color-text-primary)] focus:outline-none"
+                          className="flex-1 rounded bg-[var(--color-bg-deep)] border border-[var(--color-accent)]/40 px-2 py-1 text-xs text-[var(--color-text-primary)] focus:outline-none focus:shadow-[0_0_8px_rgba(168,85,247,0.2)]"
                         />
                       ) : (
                         <span
-                          className="flex-1 text-sm text-[var(--color-text-secondary)] cursor-pointer hover:text-[var(--color-text-primary)]"
+                          className="flex-1 text-xs text-[var(--color-text-muted)] cursor-pointer hover:text-[var(--color-accent-light)] transition-colors"
                           onClick={() => navigate(`/categories/${cat.id}?sub=${sub.id}`)}
                           onDoubleClick={() => setEditingSub({ id: sub.id, name: sub.name })}
                         >
@@ -279,22 +279,22 @@ export default function Categories() {
                         </span>
                       )}
 
-                      <div className="flex gap-1 opacity-0 group-hover/sub:opacity-100 transition-opacity">
+                      <div className="flex gap-0.5 opacity-0 group-hover/sub:opacity-100 transition-opacity">
                         <button
                           onClick={() => setEditingSub({ id: sub.id, name: sub.name })}
-                          className="rounded p-1 text-[var(--color-text-secondary)] hover:text-[var(--color-accent)] hover:bg-white/5 transition-colors"
+                          className="rounded p-1 text-[var(--color-text-muted)] hover:text-[var(--color-accent-light)] hover:bg-[var(--color-accent)]/5 transition-colors"
                           title="Rename"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                           </svg>
                         </button>
                         <button
                           onClick={() => handleDeleteSubcategory(sub.id, sub.name)}
-                          className="rounded p-1 text-[var(--color-text-secondary)] hover:text-red-400 hover:bg-white/5 transition-colors"
+                          className="rounded p-1 text-[var(--color-text-muted)] hover:text-[var(--color-negative)] hover:bg-[var(--color-negative)]/5 transition-colors"
                           title="Delete"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>
@@ -304,7 +304,7 @@ export default function Categories() {
 
                   {/* New subcategory input (inline) */}
                   {newSubName?.categoryId === cat.id ? (
-                    <div className="flex items-center gap-2 py-2">
+                    <div className="flex items-center gap-2 py-1.5">
                       <input
                         ref={newSubInputRef}
                         type="text"
@@ -316,7 +316,7 @@ export default function Categories() {
                         }}
                         onBlur={handleCreateSubcategory}
                         placeholder="Subcategory name…"
-                        className="flex-1 rounded bg-white/10 border border-[var(--color-accent)] px-2 py-1 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-secondary)] focus:outline-none"
+                        className="flex-1 rounded bg-[var(--color-bg-deep)] border border-[var(--color-accent)]/40 px-2 py-1 text-xs text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none focus:shadow-[0_0_8px_rgba(168,85,247,0.2)]"
                       />
                     </div>
                   ) : (
@@ -325,7 +325,7 @@ export default function Categories() {
                         setNewSubName({ categoryId: cat.id, name: '' });
                         setExpanded((prev) => new Set(prev).add(cat.id));
                       }}
-                      className="py-2 text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-accent)] transition-colors"
+                      className="py-1.5 text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-accent-light)] transition-colors"
                     >
                       + Add subcategory
                     </button>

@@ -104,19 +104,19 @@ export default function AccountForm() {
 
   return (
     <div>
-      <h1 className="mb-6 text-xl font-semibold text-[var(--color-text-primary)]">
+      <h1 className="mb-5 text-sm font-bold tracking-[0.15em] uppercase neon-text-subtle text-[var(--color-accent-light)]">
         {isEdit ? 'Edit Account' : 'New Account'}
       </h1>
-      <form onSubmit={handleSubmit} className="glass-strong max-w-md rounded-xl p-6">
+      <form onSubmit={handleSubmit} className="glass-strong max-w-md rounded-2xl p-5">
         {error && (
-          <div className="mb-4 rounded-lg bg-[var(--color-negative)]/10 px-4 py-2 text-sm text-[var(--color-negative)]">
+          <div className="mb-4 rounded-lg bg-[var(--color-negative)]/10 border border-[var(--color-negative)]/20 px-3 py-2 text-xs text-[var(--color-negative)]">
             {error}
           </div>
         )}
 
         {/* Name */}
         <label className="mb-4 block">
-          <span className="mb-1 block text-sm font-medium text-[var(--color-text-secondary)]">
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
             Name
           </span>
           <input
@@ -125,20 +125,20 @@ export default function AccountForm() {
             onChange={(e) => setName(e.target.value)}
             autoFocus
             maxLength={100}
-            className="w-full rounded-lg border border-[var(--color-border-glass)] bg-[var(--color-bg-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none transition-colors focus:border-[var(--color-accent)] placeholder:text-[var(--color-text-secondary)]/50"
+            className="input-cyber w-full rounded-lg px-3 py-2 text-xs"
             placeholder="e.g. Current Account"
           />
         </label>
 
         {/* Type */}
         <label className="mb-4 block">
-          <span className="mb-1 block text-sm font-medium text-[var(--color-text-secondary)]">
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
             Type
           </span>
           <select
             value={type}
             onChange={(e) => setType(e.target.value as AccountType)}
-            className="w-full rounded-lg border border-[var(--color-border-glass)] bg-[var(--color-bg-surface)] px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none transition-colors focus:border-[var(--color-accent)]"
+            className="input-cyber w-full rounded-lg px-3 py-2 text-xs [color-scheme:dark]"
           >
             {ACCOUNT_TYPES.map((t) => (
               <option key={t} value={t}>
@@ -150,11 +150,11 @@ export default function AccountForm() {
 
         {/* Starting Balance */}
         <label className="mb-6 block">
-          <span className="mb-1 block text-sm font-medium text-[var(--color-text-secondary)]">
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
             Starting Balance
           </span>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[var(--color-text-secondary)]">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono text-[var(--color-accent-light)] opacity-60">
               £
             </span>
             <input
@@ -162,7 +162,7 @@ export default function AccountForm() {
               inputMode="decimal"
               value={startingBalanceStr}
               onChange={(e) => setStartingBalanceStr(e.target.value)}
-              className="w-full rounded-lg border border-[var(--color-border-glass)] bg-[var(--color-bg-surface)] py-2 pl-7 pr-3 text-sm text-[var(--color-text-primary)] outline-none transition-colors focus:border-[var(--color-accent)]"
+              className="input-cyber w-full rounded-lg py-2 pl-7 pr-3 text-xs font-mono"
               placeholder="0.00"
             />
           </div>
@@ -173,14 +173,14 @@ export default function AccountForm() {
           <button
             type="submit"
             disabled={loading}
-            className="rounded-lg bg-[var(--color-accent)] px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--color-accent-light)] disabled:opacity-50"
+            className="btn-neon rounded-xl px-5 py-2 text-xs font-semibold tracking-wide"
           >
             {loading ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Account'}
           </button>
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="rounded-lg bg-[var(--color-bg-surface-hover)] px-5 py-2 text-sm text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-border-glass)]"
+            className="btn-ghost rounded-xl px-4 py-2 text-xs"
           >
             Cancel
           </button>
@@ -188,7 +188,7 @@ export default function AccountForm() {
             <button
               type="button"
               onClick={handleDelete}
-              className="ml-auto rounded-lg px-4 py-2 text-sm text-[var(--color-negative)] transition-colors hover:bg-[var(--color-negative)]/10"
+              className="ml-auto rounded-xl px-4 py-2 text-xs text-[var(--color-negative)] transition-all hover:bg-[var(--color-negative)]/10 hover:shadow-[0_0_15px_rgba(255,51,102,0.15)]"
             >
               Delete
             </button>

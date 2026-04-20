@@ -62,51 +62,51 @@ export default function TransactionForm({ accountId, categories, transaction, on
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md" onClick={onClose}>
       <div
-        className="glass-strong w-full max-w-md rounded-2xl p-6 shadow-xl"
+        className="glass-strong w-full max-w-md rounded-2xl p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="mb-4 text-lg font-semibold text-[var(--color-text-primary)]">
+        <h2 className="mb-4 text-sm font-bold uppercase tracking-[0.15em] neon-text-subtle text-[var(--color-accent-light)]">
           {isEdit ? 'Edit Transaction' : 'New Transaction'}
         </h2>
 
         {error && (
-          <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/30 px-3 py-2 text-sm text-red-400">
+          <div className="mb-4 rounded-lg bg-[var(--color-negative)]/10 border border-[var(--color-negative)]/20 px-3 py-2 text-xs text-[var(--color-negative)]">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Date</label>
+            <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Date</label>
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent)] focus:outline-none [color-scheme:dark]"
+              className="input-cyber w-full rounded-lg px-3 py-2 text-xs [color-scheme:dark]"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Amount</label>
+            <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Amount</label>
             <input
               type="number"
               step="0.01"
               value={amountStr}
               onChange={(e) => setAmountStr(e.target.value)}
               placeholder="Positive for income, negative for expense"
-              className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-secondary)] focus:border-[var(--color-accent)] focus:outline-none"
+              className="input-cyber w-full rounded-lg px-3 py-2 text-xs font-mono"
               autoFocus
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Category</label>
+            <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Category</label>
             <select
               value={subcategoryId ?? ''}
               onChange={(e) => setSubcategoryId(e.target.value ? Number(e.target.value) : null)}
-              className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent)] focus:outline-none [color-scheme:dark]"
+              className="input-cyber w-full rounded-lg px-3 py-2 text-xs [color-scheme:dark]"
             >
               <option value="">No category</option>
               {categories.map((cat) => (
@@ -122,13 +122,13 @@ export default function TransactionForm({ accountId, categories, transaction, on
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Description</label>
+            <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Description</label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Optional description"
-              className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-secondary)] focus:border-[var(--color-accent)] focus:outline-none"
+              className="input-cyber w-full rounded-lg px-3 py-2 text-xs"
             />
           </div>
 
@@ -138,7 +138,7 @@ export default function TransactionForm({ accountId, categories, transaction, on
                 <button
                   type="button"
                   onClick={handleDelete}
-                  className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-2 text-sm text-red-400 hover:bg-red-500/20 transition-colors"
+                  className="rounded-xl bg-[var(--color-negative)]/10 border border-[var(--color-negative)]/20 px-3 py-2 text-xs text-[var(--color-negative)] hover:bg-[var(--color-negative)]/20 hover:shadow-[0_0_15px_rgba(255,51,102,0.15)] transition-all"
                 >
                   Delete
                 </button>
@@ -148,14 +148,14 @@ export default function TransactionForm({ accountId, categories, transaction, on
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-lg bg-white/5 border border-white/10 px-4 py-2 text-sm text-[var(--color-text-primary)] hover:bg-white/10 transition-colors"
+                className="btn-ghost rounded-xl px-4 py-2 text-xs"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-50 transition-colors"
+                className="btn-neon rounded-xl px-5 py-2 text-xs font-semibold tracking-wide"
               >
                 {saving ? 'Saving…' : isEdit ? 'Update' : 'Create'}
               </button>
