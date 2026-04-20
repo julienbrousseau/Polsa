@@ -35,7 +35,7 @@ describe('db - accounts', () => {
   it('stores and retrieves accounts', async () => {
     const accounts: MobileAccount[] = [
       { id: 1, name: 'Current', type: 'checking', currentBalance: 100000 },
-      { id: 2, name: 'Savings', type: 'savings', currentBalance: 500000 },
+      { id: 2, name: 'Wallet', type: 'cash', currentBalance: 500000 },
     ];
 
     await replaceAllAccounts(accounts);

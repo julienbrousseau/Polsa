@@ -20,6 +20,7 @@ export default function AddTransaction() {
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<number | ''>('');
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     Promise.all([getAllAccounts(), getAllCategories(), getAllSubcategories()]).then(
@@ -44,10 +45,26 @@ export default function AddTransaction() {
     : [];
 
   const handleSave = async () => {
-    if (!selectedAccountId || !amountStr || !date) return;
+    setError('');
+
+    if (!selectedAccountId) {
+      setError('Please select an account');
+      return;
+    }
+    if (!amountStr) {
+      setError('Please enter an amount');
+      return;
+    }
+    if (!date) {
+      setError('Please enter a date');
+      return;
+    }
 
     const parsedAmount = Math.round(parseFloat(amountStr) * 100);
-    if (isNaN(parsedAmount) || parsedAmount === 0) return;
+    if (isNaN(parsedAmount) || parsedAmount === 0) {
+      setError('Please enter a valid amount');
+      return;
+    }
 
     const finalAmount = isExpense ? -Math.abs(parsedAmount) : Math.abs(parsedAmount);
 
@@ -64,6 +81,8 @@ export default function AddTransaction() {
         synced: false,
       });
       navigate('/');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save transaction');
     } finally {
       setSaving(false);
     }
@@ -199,11 +218,14 @@ export default function AddTransaction() {
         </div>
       </div>
 
-      {/* Save button */}
-      <div className="px-4 py-4 safe-area-bottom">
+      {/* Save button — sticky so it stays visible above keyboard/fold */}
+      <div className="sticky bottom-0 px-4 py-3 safe-area-bottom bg-[var(--color-bg-base)]/90 backdrop-blur-sm border-t border-[var(--color-border-glass)]">
+        {error && (
+          <p className="text-xs text-[var(--color-negative)] text-center mb-2">{error}</p>
+        )}
         <button
           onClick={handleSave}
-          disabled={!selectedAccountId || !amountStr || saving}
+          disabled={saving}
           className="btn-neon w-full py-3.5 rounded-xl text-sm font-medium disabled:opacity-40"
         >
           {saving ? 'Saving...' : 'Save Transaction'}

@@ -47,7 +47,7 @@ export function getUnreconciledTransactions(
   `).get(accountId) as { total: number };
 
   const rows = db.prepare(`
-    SELECT t.id, t.account_id, t.date, t.amount, t.subcategory_id, t.description, t.reconciled,
+    SELECT t.id, t.account_id, t.date, t.amount, t.category_id, t.subcategory_id, t.description, t.reconciled,
         s.name AS subcategory_name,
         COALESCE(c_sub.name, c_dir.name) AS category_name
     FROM transactions t
@@ -62,6 +62,7 @@ export function getUnreconciledTransactions(
     account_id: number;
     date: string;
     amount: number;
+    category_id: number | null;
     subcategory_id: number | null;
     description: string;
     reconciled: number;
@@ -74,6 +75,7 @@ export function getUnreconciledTransactions(
     accountId: r.account_id,
     date: r.date,
     amount: r.amount,
+    categoryId: r.category_id,
     subcategoryId: r.subcategory_id,
     description: r.description,
     reconciled: r.reconciled === 1,

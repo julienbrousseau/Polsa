@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import QRCode from 'qrcode';
 
 type SyncMode = 'menu' | 'scan' | 'server' | 'result';
@@ -9,26 +9,68 @@ declare global {
   }
 }
 
+/** Renders a QR code onto a <canvas> element */
+function QrCanvas({ data, size = 256 }: { data: string; size?: number }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    if (!canvasRef.current || !data) return;
+    QRCode.toCanvas(canvasRef.current, data, {
+      width: size,
+      margin: 2,
+      color: { dark: '#e8e0f0', light: '#080b18' },
+      errorCorrectionLevel: 'L',
+    }).catch(() => {
+      // If data too large for QR, clear the canvas
+      const ctx = canvasRef.current?.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, size, size);
+        ctx.fillStyle = '#e8e0f0';
+        ctx.font = '14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Data too large for QR', size / 2, size / 2);
+      }
+    });
+  }, [data, size]);
+
+  return <canvas ref={canvasRef} className="mx-auto" />;
+}
+
 export default function MobileSync() {
   const [mode, setMode] = useState<SyncMode>('menu');
-  const [qrDataUrl, setQrDataUrl] = useState('');
+  const [qrData, setQrData] = useState('');
   const [scanInput, setScanInput] = useState('');
   const [serverInfo, setServerInfo] = useState<{ url: string; port: number } | null>(null);
-  const [serverQr, setServerQr] = useState('');
+  const [serverUrl, setServerUrl] = useState('');
   const [resultMessage, setResultMessage] = useState('');
+  const [companionUrl, setCompanionUrl] = useState('');
+  const [companionError, setCompanionError] = useState('');
+
+  // Start companion server on mount, stop on unmount
+  useEffect(() => {
+    let mounted = true;
+    window.polsa.sync.startCompanion().then((info: { url: string; port: number } | null) => {
+      if (!mounted) return;
+      if (info) {
+        setCompanionUrl(info.url);
+      } else {
+        setCompanionError('Companion app not built. Run "npm run build" in the companion/ folder first.');
+      }
+    }).catch(() => {
+      if (mounted) setCompanionError('Failed to start companion server');
+    });
+
+    return () => {
+      mounted = false;
+      window.polsa.sync.stopCompanion();
+    };
+  }, []);
 
   // Generate QR with desktop reference data for mobile to scan
   const handleShowRefData = async () => {
     try {
       const payload = await window.polsa.sync.generatePayload();
-      const data = JSON.stringify(payload);
-      const url = await QRCode.toDataURL(data, {
-        width: 300,
-        margin: 2,
-        color: { dark: '#e8e0f0', light: '#080b18' },
-        errorCorrectionLevel: 'M',
-      });
-      setQrDataUrl(url);
+      setQrData(JSON.stringify(payload));
       setMode('scan');
     } catch (err) {
       setResultMessage('Failed to generate sync data');
@@ -46,15 +88,8 @@ export default function MobileSync() {
       const syncedIds = payload.transactions?.map((t: any) => t.id) ?? [];
       const confirmPayload = await window.polsa.sync.generatePayload();
       confirmPayload.syncedIds = syncedIds;
+      setQrData(JSON.stringify(confirmPayload));
 
-      const confirmQr = await QRCode.toDataURL(JSON.stringify(confirmPayload), {
-        width: 300,
-        margin: 2,
-        color: { dark: '#e8e0f0', light: '#080b18' },
-        errorCorrectionLevel: 'M',
-      });
-
-      setQrDataUrl(confirmQr);
       setResultMessage(
         `Imported ${result.imported} transaction${result.imported !== 1 ? 's' : ''}` +
         (result.duplicates > 0 ? ` (${result.duplicates} duplicate${result.duplicates !== 1 ? 's' : ''} skipped)` : '') +
@@ -71,13 +106,7 @@ export default function MobileSync() {
     try {
       const info = await window.polsa.sync.startServer();
       setServerInfo(info);
-      const url = await QRCode.toDataURL(info.url, {
-        width: 200,
-        margin: 2,
-        color: { dark: '#e8e0f0', light: '#080b18' },
-        errorCorrectionLevel: 'M',
-      });
-      setServerQr(url);
+      setServerUrl(info.url);
       setMode('server');
     } catch {
       setResultMessage('Failed to start sync server');
@@ -107,10 +136,54 @@ export default function MobileSync() {
       </h1>
 
       {mode === 'menu' && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <p className="text-sm text-[var(--color-text-secondary)]">
             Sync transactions between your phone and desktop
           </p>
+
+          {/* Install companion app */}
+          <details className="glass-card rounded-xl overflow-hidden" open={!!companionUrl}>
+            <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-[var(--color-accent-light)] hover:bg-[var(--color-bg-surface-hover)] transition-colors flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              Install the companion app on your phone
+            </summary>
+            <div className="px-4 pb-4 space-y-4 border-t border-[var(--color-border)]">
+              {companionUrl && (
+                <div className="pt-4 text-center space-y-2">
+                  <p className="text-xs text-[var(--color-text-secondary)]">
+                    Scan this QR code on your phone to open the companion app:
+                  </p>
+                  <QrCanvas data={companionUrl} size={200} />
+                  <p className="text-xs font-mono text-[var(--color-accent-light)]">{companionUrl}</p>
+                  <p className="text-[10px] text-[var(--color-text-muted)]">
+                    Your phone must be on the same WiFi network. The server is active while this page is open.
+                  </p>
+                </div>
+              )}
+              {companionError && (
+                <div className="pt-4 text-center">
+                  <p className="text-xs text-[var(--color-negative)]">{companionError}</p>
+                  <pre className="mt-2 bg-[var(--color-bg-surface)] rounded-lg p-2.5 font-mono text-xs text-[var(--color-accent-light)] overflow-x-auto">cd companion{'\n'}npm run build</pre>
+                </div>
+              )}
+              <div className="pt-2 space-y-3 text-xs text-[var(--color-text-secondary)]">
+                <div className="space-y-2">
+                  <p className="font-semibold text-[var(--color-text-primary)]">Install as an app</p>
+                  <p>After scanning the QR, install it as a home-screen app:</p>
+                  <ul className="list-disc list-inside space-y-1 ml-1">
+                    <li><strong>iPhone (Safari):</strong> Tap the Share button → <em>Add to Home Screen</em></li>
+                    <li><strong>Android (Chrome):</strong> Tap the menu (⋮) → <em>Install app</em> or <em>Add to Home Screen</em></li>
+                  </ul>
+                </div>
+                <div className="space-y-2">
+                  <p className="font-semibold text-[var(--color-text-primary)]">First sync</p>
+                  <p>Use <strong>Network Sync</strong> below to send your accounts and categories to the phone, then you can add transactions on the go.</p>
+                </div>
+              </div>
+            </div>
+          </details>
 
           {/* Import from mobile QR */}
           <button
@@ -175,10 +248,10 @@ export default function MobileSync() {
             <span className="text-sm font-medium">Import Mobile Transactions</span>
           </div>
 
-          {qrDataUrl && (
+          {qrData && (
             <div className="glass-card rounded-xl p-4 text-center">
               <p className="text-xs text-[var(--color-text-muted)] mb-3">Reference data QR for mobile</p>
-              <img src={qrDataUrl} alt="Reference QR" className="mx-auto w-64 h-64" />
+              <QrCanvas data={qrData} size={256} />
             </div>
           )}
 
@@ -220,9 +293,7 @@ export default function MobileSync() {
               Sync server running at:
             </p>
             <p className="text-lg font-mono text-[var(--color-accent-light)]">{serverInfo.url}</p>
-            {serverQr && (
-              <img src={serverQr} alt="Server URL QR" className="mx-auto w-48 h-48" />
-            )}
+            {serverUrl && <QrCanvas data={serverUrl} size={200} />}
             <p className="text-xs text-[var(--color-text-muted)]">
               Scan this QR or enter the URL on your phone to sync
             </p>
@@ -246,16 +317,16 @@ export default function MobileSync() {
               </svg>
             </div>
             <p className="text-sm text-[var(--color-text-secondary)]">{resultMessage}</p>
-            {qrDataUrl && (
+            {qrData && (
               <>
                 <p className="text-xs text-[var(--color-text-muted)]">Confirmation QR for mobile:</p>
-                <img src={qrDataUrl} alt="Confirmation QR" className="mx-auto w-64 h-64" />
+                <QrCanvas data={qrData} size={256} />
               </>
             )}
           </div>
 
           <button
-            onClick={() => { setMode('menu'); setQrDataUrl(''); setScanInput(''); setResultMessage(''); }}
+            onClick={() => { setMode('menu'); setQrData(''); setScanInput(''); setResultMessage(''); }}
             className="btn-neon px-6 py-2.5 rounded-xl text-sm font-medium"
           >
             Done

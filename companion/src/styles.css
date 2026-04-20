@@ -110,3 +110,7 @@ body {
 }
 
 ::selection { background: rgba(168, 85, 247, 0.3); color: white; }
+
+.safe-area-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}

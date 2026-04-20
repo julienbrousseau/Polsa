@@ -70,6 +70,8 @@ export interface PolsaAPI {
     generatePayload: () => Promise<any>;
     startServer: () => Promise<any>;
     stopServer: () => Promise<void>;
+    startCompanion: () => Promise<{ url: string; port: number } | null>;
+    stopCompanion: () => Promise<void>;
   };
 }
 
@@ -132,6 +134,8 @@ const api: PolsaAPI = {
     generatePayload: () => ipcRenderer.invoke('sync:generatePayload'),
     startServer: () => ipcRenderer.invoke('sync:startServer'),
     stopServer: () => ipcRenderer.invoke('sync:stopServer'),
+    startCompanion: () => ipcRenderer.invoke('sync:startCompanion'),
+    stopCompanion: () => ipcRenderer.invoke('sync:stopCompanion'),
   },
 };
 

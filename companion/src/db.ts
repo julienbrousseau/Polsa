@@ -77,9 +77,13 @@ export function resetDB(): void {
 
 // ── Account operations ──
 
+// Only expose checking and cash accounts in the companion app
+const COMPANION_ACCOUNT_TYPES: ReadonlySet<string> = new Set(['checking', 'cash']);
+
 export async function getAllAccounts(): Promise<MobileAccount[]> {
   const db = await getDB();
-  return db.getAll('accounts');
+  const all = await db.getAll('accounts');
+  return all.filter(a => COMPANION_ACCOUNT_TYPES.has(a.type));
 }
 
 export async function getAccount(id: number): Promise<MobileAccount | undefined> {
