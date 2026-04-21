@@ -5,7 +5,9 @@ import {
   listTransactions,
   createTransaction,
   createTransfer,
+  updateTransfer,
   updateTransaction,
+  deleteTransfer,
   deleteTransaction,
 } from '../services/transaction-service';
 import type {
@@ -30,6 +32,14 @@ export function registerTransactionHandlers(): void {
 
   ipcMain.handle('transactions:update', (_event, input: UpdateTransactionInput) => {
     return updateTransaction(input);
+  });
+
+  ipcMain.handle('transactions:updateTransfer', (_event, input) => {
+    return updateTransfer(input);
+  });
+
+  ipcMain.handle('transactions:deleteTransfer', (_event, groupId: string) => {
+    return deleteTransfer(groupId);
   });
 
   ipcMain.handle('transactions:delete', (_event, id: number) => {

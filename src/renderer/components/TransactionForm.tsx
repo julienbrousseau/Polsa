@@ -92,25 +92,78 @@ export default function TransactionForm({ accountId, accounts, categories, trans
   const availableDestinationAccounts = accounts.filter((a) => a.id !== accountId);
 
   if (isTransferEdit && transaction) {
+    // Allow editing/deleting the transfer pair
+    const [editDate, setEditDate] = useState(transaction.date);
+    const [editAmount, setEditAmount] = useState((Math.abs(transaction.amount) / 100).toFixed(2));
+    const [editDescription, setEditDescription] = useState(transaction.description);
+    const [savingEdit, setSavingEdit] = useState(false);
+    const [errorEdit, setErrorEdit] = useState<string | null>(null);
+
+    const handleEdit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setSavingEdit(true);
+      setErrorEdit(null);
+      try {
+        await window.polsa.transactions.updateTransfer({
+          groupId: transaction.transferGroupId,
+          date: editDate,
+          amount: Math.round(parseFloat(editAmount) * 100),
+          description: editDescription,
+        });
+        onClose();
+      } catch (e: any) {
+        setErrorEdit(e.message);
+      } finally {
+        setSavingEdit(false);
+      }
+    };
+
+    const handleDelete = async () => {
+      if (!window.confirm('Delete this transfer (both accounts)?')) return;
+      setSavingEdit(true);
+      setErrorEdit(null);
+      try {
+        await window.polsa.transactions.deleteTransfer(transaction.transferGroupId);
+        onClose();
+      } catch (e: any) {
+        setErrorEdit(e.message);
+      } finally {
+        setSavingEdit(false);
+      }
+    };
+
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md" onClick={onClose}>
         <div className="glass-strong w-full max-w-md rounded-2xl p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
           <h2 className="mb-4 text-sm font-bold uppercase tracking-[0.15em] neon-text-subtle text-[var(--color-accent-light)]">
-            Transfer Transaction
+            Edit Transfer
           </h2>
-          <p className="mb-4 text-xs text-[var(--color-text-muted)]">
-            Transfers are paired transactions across two accounts and cannot be edited or deleted individually.
-          </p>
-          <div className="space-y-2 rounded-lg border border-[var(--color-accent)]/15 bg-[var(--color-accent)]/[0.03] p-3 text-xs">
-            <div><span className="text-[var(--color-text-muted)]">Date:</span> {transaction.date}</div>
-            <div><span className="text-[var(--color-text-muted)]">Amount:</span> {(transaction.amount / 100).toFixed(2)}</div>
-            <div><span className="text-[var(--color-text-muted)]">Counterparty:</span> {transaction.transferAccountName ?? 'Unknown account'}</div>
-          </div>
-          <div className="mt-4 flex justify-end">
-            <button type="button" onClick={onClose} className="btn-ghost rounded-xl px-4 py-2 text-xs">
-              Close
-            </button>
-          </div>
+          {errorEdit && (
+            <div className="mb-4 rounded-lg bg-[var(--color-negative)]/10 border border-[var(--color-negative)]/20 px-3 py-2 text-xs text-[var(--color-negative)]">
+              {errorEdit}
+            </div>
+          )}
+          <form onSubmit={handleEdit} className="space-y-3">
+            <div>
+              <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Date</label>
+              <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} className="input-cyber w-full rounded-lg px-3 py-2 text-xs" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Amount</label>
+              <input type="number" step="0.01" value={editAmount} onChange={e => setEditAmount(e.target.value)} className="input-cyber w-full rounded-lg px-3 py-2 text-xs font-mono" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Description</label>
+              <input type="text" value={editDescription} onChange={e => setEditDescription(e.target.value)} className="input-cyber w-full rounded-lg px-3 py-2 text-xs" />
+            </div>
+            <div className="flex justify-between pt-2">
+              <button type="button" onClick={handleDelete} className="rounded-xl bg-[var(--color-negative)]/10 border border-[var(--color-negative)]/20 px-3 py-2 text-xs text-[var(--color-negative)] hover:bg-[var(--color-negative)]/20 transition-all" disabled={savingEdit}>Delete</button>
+              <div className="flex gap-2">
+                <button type="button" onClick={onClose} className="btn-ghost rounded-xl px-4 py-2 text-xs">Cancel</button>
+                <button type="submit" disabled={savingEdit} className="btn-neon rounded-xl px-5 py-2 text-xs font-semibold tracking-wide">{savingEdit ? 'Saving…' : 'Update'}</button>
+              </div>
+            </div>
+          </form>
         </div>
       </div>
     );

@@ -140,8 +140,12 @@ export default function AccountDetail() {
     await refreshAll();
   };
 
-  const handleFormDelete = async (txId: number) => {
-    await window.polsa.transactions.delete(txId);
+  const handleFormDelete = async (txId: number, tx?: TransactionDisplay) => {
+    if (tx && tx.transactionType === 'transfer' && tx.transferGroupId) {
+      await window.polsa.transactions.deleteTransfer(tx.transferGroupId);
+    } else {
+      await window.polsa.transactions.delete(txId);
+    }
     await refreshAll();
   };
 
