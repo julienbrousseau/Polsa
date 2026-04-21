@@ -1,23 +1,30 @@
 import { useState, useEffect } from 'react';
 import { todayISO } from '../lib/format';
-import type { CategoryWithSubs, TransactionDisplay } from '../lib/types';
+import type { Account, CategoryWithSubs, TransactionDisplay } from '../lib/types';
 import CategoryAutocomplete, { type CategoryValue } from './CategoryAutocomplete';
 
 interface Props {
   accountId: number;
+  accounts: Account[];
   categories: CategoryWithSubs[];
   transaction?: TransactionDisplay | null;
-  onSave: (tx: { id?: number; date: string; amount: number; categoryId: number | null; subcategoryId: number | null; description: string }) => Promise<void>;
+  onSave: (tx:
+    | { id?: number; type: 'standard'; date: string; amount: number; categoryId: number | null; subcategoryId: number | null; description: string }
+    | { type: 'transfer'; date: string; amount: number; toAccountId: number; description: string }
+  ) => Promise<void>;
   onDelete?: (id: number) => Promise<void>;
   onClose: () => void;
 }
 
-export default function TransactionForm({ accountId, categories, transaction, onSave, onDelete, onClose }: Props) {
+export default function TransactionForm({ accountId, accounts, categories, transaction, onSave, onDelete, onClose }: Props) {
   const isEdit = !!transaction;
+  const isTransferEdit = transaction?.transactionType === 'transfer';
   const [date, setDate] = useState(transaction?.date ?? todayISO());
   const [amountStr, setAmountStr] = useState(
     transaction ? (transaction.amount / 100).toFixed(2) : ''
   );
+  const [type, setType] = useState<'standard' | 'transfer'>(isTransferEdit ? 'transfer' : 'standard');
+  const [toAccountId, setToAccountId] = useState<number | ''>(transaction?.transferAccountId ?? '');
   const [category, setCategory] = useState<CategoryValue>({
     categoryId: transaction?.categoryId ?? null,
     subcategoryId: transaction?.subcategoryId ?? null,
@@ -34,17 +41,35 @@ export default function TransactionForm({ accountId, categories, transaction, on
       return;
     }
 
+    if (type === 'transfer') {
+      if (!toAccountId || toAccountId === accountId) {
+        setError('Select a different destination account');
+        return;
+      }
+    }
+
     setError(null);
     setSaving(true);
     try {
-      await onSave({
-        id: transaction?.id,
-        date,
-        amount: amt,
-        categoryId: category.categoryId,
-        subcategoryId: category.subcategoryId,
-        description,
-      });
+      if (type === 'transfer') {
+        await onSave({
+          type: 'transfer',
+          date,
+          amount: Math.abs(amt),
+          toAccountId,
+          description,
+        });
+      } else {
+        await onSave({
+          id: transaction?.id,
+          type: 'standard',
+          date,
+          amount: amt,
+          categoryId: category.categoryId,
+          subcategoryId: category.subcategoryId,
+          description,
+        });
+      }
       onClose();
     } catch (e: any) {
       setError(e.message);
@@ -64,6 +89,33 @@ export default function TransactionForm({ accountId, categories, transaction, on
     }
   };
 
+  const availableDestinationAccounts = accounts.filter((a) => a.id !== accountId);
+
+  if (isTransferEdit && transaction) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md" onClick={onClose}>
+        <div className="glass-strong w-full max-w-md rounded-2xl p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <h2 className="mb-4 text-sm font-bold uppercase tracking-[0.15em] neon-text-subtle text-[var(--color-accent-light)]">
+            Transfer Transaction
+          </h2>
+          <p className="mb-4 text-xs text-[var(--color-text-muted)]">
+            Transfers are paired transactions across two accounts and cannot be edited or deleted individually.
+          </p>
+          <div className="space-y-2 rounded-lg border border-[var(--color-accent)]/15 bg-[var(--color-accent)]/[0.03] p-3 text-xs">
+            <div><span className="text-[var(--color-text-muted)]">Date:</span> {transaction.date}</div>
+            <div><span className="text-[var(--color-text-muted)]">Amount:</span> {(transaction.amount / 100).toFixed(2)}</div>
+            <div><span className="text-[var(--color-text-muted)]">Counterparty:</span> {transaction.transferAccountName ?? 'Unknown account'}</div>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <button type="button" onClick={onClose} className="btn-ghost rounded-xl px-4 py-2 text-xs">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md" onClick={onClose}>
       <div
@@ -81,6 +133,36 @@ export default function TransactionForm({ accountId, categories, transaction, on
         )}
 
         <form onSubmit={handleSubmit} className="space-y-3">
+          {!isEdit && (
+            <div>
+              <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Type</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setType('standard')}
+                  className={`rounded-lg border px-3 py-2 text-xs transition-all ${
+                    type === 'standard'
+                      ? 'border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-[var(--color-accent-light)]'
+                      : 'border-[var(--color-border-glass)] bg-[var(--color-bg-panel)] text-[var(--color-text-muted)]'
+                  }`}
+                >
+                  Standard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setType('transfer')}
+                  className={`rounded-lg border px-3 py-2 text-xs transition-all ${
+                    type === 'transfer'
+                      ? 'border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-[var(--color-accent-light)]'
+                      : 'border-[var(--color-border-glass)] bg-[var(--color-bg-panel)] text-[var(--color-text-muted)]'
+                  }`}
+                >
+                  Transfer
+                </button>
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Date</label>
             <input
@@ -98,22 +180,40 @@ export default function TransactionForm({ accountId, categories, transaction, on
               step="0.01"
               value={amountStr}
               onChange={(e) => setAmountStr(e.target.value)}
-              placeholder="Positive for income, negative for expense"
+              placeholder={type === 'transfer' ? 'Transfer amount' : 'Positive for income, negative for expense'}
               className="input-cyber w-full rounded-lg px-3 py-2 text-xs font-mono"
               autoFocus
             />
           </div>
 
-          <div>
-            <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Category</label>
-            <CategoryAutocomplete
-              categories={categories}
-              value={category}
-              onChange={setCategory}
-              placeholder="Search category…"
-              className="[&_input]:px-3 [&_input]:py-2"
-            />
-          </div>
+          {type === 'standard' ? (
+            <div>
+              <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Category</label>
+              <CategoryAutocomplete
+                categories={categories}
+                value={category}
+                onChange={setCategory}
+                placeholder="Search category…"
+                className="[&_input]:px-3 [&_input]:py-2"
+              />
+            </div>
+          ) : (
+            <div>
+              <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Transfer To</label>
+              <select
+                value={toAccountId}
+                onChange={(e) => setToAccountId(e.target.value ? Number(e.target.value) : '')}
+                className="input-cyber w-full rounded-lg px-3 py-2 text-xs"
+              >
+                <option value="">Select destination account</option>
+                {availableDestinationAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Description</label>

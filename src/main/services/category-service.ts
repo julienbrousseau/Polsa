@@ -121,14 +121,16 @@ export function listCategoryTransactions(input: CategoryTransactionInput): Categ
   `).get(...params) as { total: number };
 
   const rows = db.prepare(`
-    SELECT t.id, t.account_id, t.date, t.amount, t.category_id, t.subcategory_id, t.description, t.reconciled,
+    SELECT t.id, t.account_id, t.date, t.amount, t.transaction_type, t.transfer_account_id, t.category_id, t.subcategory_id, t.description, t.reconciled,
         s.name as subcategory_name,
         COALESCE(c_sub.name, c_dir.name) as category_name,
+           ta.name as transfer_account_name,
            a.name as account_name
     FROM transactions t
     LEFT JOIN subcategories s ON s.id = t.subcategory_id
       LEFT JOIN categories c_sub ON c_sub.id = s.category_id
       LEFT JOIN categories c_dir ON c_dir.id = t.category_id
+    LEFT JOIN accounts ta ON ta.id = t.transfer_account_id
     LEFT JOIN accounts a ON a.id = t.account_id
     WHERE ${whereClause}
     ORDER BY t.date DESC, t.id DESC
@@ -138,12 +140,15 @@ export function listCategoryTransactions(input: CategoryTransactionInput): Categ
     account_id: number;
     date: string;
     amount: number;
+    transaction_type: 'standard' | 'transfer';
+    transfer_account_id: number | null;
     category_id: number | null;
     subcategory_id: number | null;
     description: string;
     reconciled: number;
     subcategory_name: string | null;
     category_name: string | null;
+    transfer_account_name: string | null;
     account_name: string;
   }>;
 
@@ -152,12 +157,15 @@ export function listCategoryTransactions(input: CategoryTransactionInput): Categ
     accountId: r.account_id,
     date: r.date,
     amount: r.amount,
+    transactionType: r.transaction_type,
+    transferAccountId: r.transfer_account_id,
     categoryId: r.category_id,
     subcategoryId: r.subcategory_id,
     description: r.description,
     reconciled: r.reconciled === 1,
     categoryName: r.category_name,
     subcategoryName: r.subcategory_name,
+    transferAccountName: r.transfer_account_name,
     runningBalance: 0, // Not meaningful in cross-account view
   }));
 

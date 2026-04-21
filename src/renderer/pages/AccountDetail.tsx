@@ -11,6 +11,7 @@ export default function AccountDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [account, setAccount] = useState<Account | null>(null);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<TransactionDisplay[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -19,6 +20,7 @@ export default function AccountDetail() {
   const [editingTx, setEditingTx] = useState<TransactionDisplay | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [importStatus, setImportStatus] = useState<string | null>(null);
+  const [showReconciled, setShowReconciled] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const accountId = Number(id);
@@ -32,12 +34,22 @@ export default function AccountDetail() {
     }
   }, [accountId]);
 
+  const loadAccounts = useCallback(async () => {
+    try {
+      const all = await window.polsa.accounts.list();
+      setAccounts(all);
+    } catch {
+      setAccounts([]);
+    }
+  }, []);
+
   const loadTransactions = useCallback(async (offset = 0, append = false) => {
     try {
       const result = await window.polsa.transactions.list({
         accountId,
         offset,
         limit: TRANSACTIONS_PAGE_SIZE,
+        includeReconciled: showReconciled,
       });
       if (append) {
         setTransactions((prev) => [...prev, ...result.transactions]);
@@ -48,7 +60,7 @@ export default function AccountDetail() {
     } catch {
       // ignore
     }
-  }, [accountId]);
+  }, [accountId, showReconciled]);
 
   const loadCategories = useCallback(async () => {
     try {
@@ -62,10 +74,10 @@ export default function AccountDetail() {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    Promise.all([loadAccount(), loadTransactions(), loadCategories()]).finally(() =>
+    Promise.all([loadAccount(), loadAccounts(), loadTransactions(), loadCategories()]).finally(() =>
       setLoading(false)
     );
-  }, [id, loadAccount, loadTransactions, loadCategories]);
+  }, [id, loadAccount, loadAccounts, loadTransactions, loadCategories]);
 
   const loadMore = async () => {
     if (loadingMore || transactions.length >= total) return;
@@ -94,11 +106,36 @@ export default function AccountDetail() {
     await refreshAll();
   };
 
-  const handleFormSave = async (tx: { id?: number; date: string; amount: number; categoryId: number | null; subcategoryId: number | null; description: string }) => {
-    if (tx.id) {
-      await window.polsa.transactions.update(tx);
+  const handleFormSave = async (tx:
+    | { id?: number; type: 'standard'; date: string; amount: number; categoryId: number | null; subcategoryId: number | null; description: string }
+    | { type: 'transfer'; date: string; amount: number; toAccountId: number; description: string }
+  ) => {
+    if (tx.type === 'transfer') {
+      await window.polsa.transactions.createTransfer({
+        fromAccountId: accountId,
+        toAccountId: tx.toAccountId,
+        date: tx.date,
+        amount: tx.amount,
+        description: tx.description,
+      });
+    } else if (tx.id) {
+      await window.polsa.transactions.update({
+        id: tx.id,
+        date: tx.date,
+        amount: tx.amount,
+        categoryId: tx.categoryId,
+        subcategoryId: tx.subcategoryId,
+        description: tx.description,
+      });
     } else {
-      await window.polsa.transactions.create({ accountId, ...tx });
+      await window.polsa.transactions.create({
+        accountId,
+        date: tx.date,
+        amount: tx.amount,
+        categoryId: tx.categoryId,
+        subcategoryId: tx.subcategoryId,
+        description: tx.description,
+      });
     }
     await refreshAll();
   };
@@ -204,6 +241,18 @@ export default function AccountDetail() {
         </div>
       </div>
 
+      <div className="mb-3 flex items-center justify-end flex-shrink-0">
+        <label className="flex cursor-pointer items-center gap-2 text-xs text-[var(--color-text-muted)]">
+          <input
+            type="checkbox"
+            className="h-4 w-4 accent-[var(--color-accent)]"
+            checked={showReconciled}
+            onChange={(e) => setShowReconciled(e.target.checked)}
+          />
+          Show reconciled transactions
+        </label>
+      </div>
+
       {/* Status message */}
       {importStatus && (
         <div className={`mb-3 rounded-lg px-4 py-2 text-xs flex-shrink-0 ${
@@ -250,7 +299,7 @@ export default function AccountDetail() {
 
             {transactions.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-8 text-center text-xs text-[var(--color-text-muted)]">
+                <td colSpan={6} className="px-3 py-8 text-center text-xs text-[var(--color-text-muted)]">
                   No transactions yet. Use the row above to add your first.
                 </td>
               </tr>
@@ -269,6 +318,7 @@ export default function AccountDetail() {
       {showForm && (
         <TransactionForm
           accountId={accountId}
+          accounts={accounts}
           categories={categories}
           transaction={editingTx}
           onSave={handleFormSave}

@@ -15,6 +15,7 @@ export interface PolsaAPI {
   transactions: {
     list: (input: any) => Promise<any>;
     create: (input: any) => Promise<any>;
+    createTransfer: (input: any) => Promise<any>;
     update: (input: any) => Promise<any>;
     delete: (id: number) => Promise<void>;
   };
@@ -86,6 +87,7 @@ const api: PolsaAPI = {
   transactions: {
     list: (input) => ipcRenderer.invoke('transactions:list', input),
     create: (input) => ipcRenderer.invoke('transactions:create', input),
+    createTransfer: (input) => ipcRenderer.invoke('transactions:createTransfer', input),
     update: (input) => ipcRenderer.invoke('transactions:update', input),
     delete: (id) => ipcRenderer.invoke('transactions:delete', id),
   },

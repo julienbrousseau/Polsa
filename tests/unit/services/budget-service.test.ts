@@ -156,6 +156,15 @@ describe('budget-service', () => {
       createTransaction(testDb, accountId, -15000, '2026-04-15', sub2);
       expect(getSpent(null, catId, 2026, 4)).toBe(35000);
     });
+
+    it('category-level getSpent includes direct category transactions', () => {
+      createTransaction(testDb, accountId, -20000, '2026-04-10', subId);
+      testDb.prepare(
+        'INSERT INTO transactions (account_id, date, amount, category_id, subcategory_id, description) VALUES (?, ?, ?, ?, NULL, ?)'
+      ).run(accountId, '2026-04-15', -9000, catId, 'Direct category');
+
+      expect(getSpent(null, catId, 2026, 4)).toBe(29000);
+    });
   });
 
   describe('getRollover', () => {
@@ -284,12 +293,87 @@ describe('budget-service', () => {
       expect(overview.categories[0].subcategories).toHaveLength(0);
     });
 
-    it('includes categories with spending but no budget', () => {
-      createTransaction(testDb, accountId, -10000, '2026-04-10', subId);
+    it('category-level overview spent includes direct category and subcategory transactions', () => {
+      setAllocation({ subcategoryId: null, categoryId: catId, year: 2026, month: 4, amount: 100000, applyToFutureMonths: false });
+
+      createTransaction(testDb, accountId, -60000, '2026-04-10', subId);
+      testDb.prepare(
+        'INSERT INTO transactions (account_id, date, amount, category_id, subcategory_id, description) VALUES (?, ?, ?, ?, NULL, ?)'
+      ).run(accountId, '2026-04-11', -7000, catId, 'Direct category');
+
       const overview = getOverview(2026, 4);
       expect(overview.categories).toHaveLength(1);
-      expect(overview.categories[0].spent).toBe(10000);
-      expect(overview.categories[0].allocated).toBe(0);
+      expect(overview.categories[0].spent).toBe(67000);
+      expect(overview.totalSpent).toBe(67000);
+    });
+
+    it('uses category-level review totals when both category and subcategory budgets exist', () => {
+      const sub2 = createSubcategory(testDb, catId, 'Utilities');
+
+      setAllocation({ subcategoryId: null, categoryId: catId, year: 2026, month: 4, amount: 100000, applyToFutureMonths: false });
+      setAllocation({ subcategoryId: subId, categoryId: catId, year: 2026, month: 4, amount: 60000, applyToFutureMonths: false });
+
+      createTransaction(testDb, accountId, -20000, '2026-04-10', subId);
+      createTransaction(testDb, accountId, -5000, '2026-04-11', sub2);
+      testDb.prepare(
+        'INSERT INTO transactions (account_id, date, amount, category_id, subcategory_id, description) VALUES (?, ?, ?, ?, NULL, ?)'
+      ).run(accountId, '2026-04-12', -5000, catId, 'Direct category');
+
+      const overview = getOverview(2026, 4);
+      expect(overview.categories).toHaveLength(1);
+      expect(overview.categories[0].allocated).toBe(100000);
+      expect(overview.categories[0].spent).toBe(30000);
+      expect(overview.totalSpent).toBe(30000);
+      expect(overview.categories[0].subcategories).toHaveLength(0);
+    });
+
+    it('does not treat category-level zero as an active category budget', () => {
+      const sub2 = createSubcategory(testDb, catId, 'Utilities');
+
+      setAllocation({ subcategoryId: null, categoryId: catId, year: 2026, month: 4, amount: 0, applyToFutureMonths: false });
+      setAllocation({ subcategoryId: subId, categoryId: catId, year: 2026, month: 4, amount: 30000, applyToFutureMonths: false });
+      setAllocation({ subcategoryId: sub2, categoryId: catId, year: 2026, month: 4, amount: 50000, applyToFutureMonths: false });
+
+      createTransaction(testDb, accountId, -12000, '2026-04-10', subId);
+      createTransaction(testDb, accountId, -9000, '2026-04-11', sub2);
+
+      const overview = getOverview(2026, 4);
+      expect(overview.categories).toHaveLength(1);
+      expect(overview.categories[0].allocated).toBe(80000);
+      expect(overview.categories[0].spent).toBe(21000);
+      expect(overview.categories[0].subcategories).toHaveLength(2);
+      expect(overview.totalAllocated).toBe(80000);
+      expect(overview.totalSpent).toBe(21000);
+    });
+
+    it('excludes categories with spending but no budget', () => {
+      createTransaction(testDb, accountId, -10000, '2026-04-10', subId);
+      const overview = getOverview(2026, 4);
+      expect(overview.categories).toHaveLength(0);
+      expect(overview.totalSpent).toBe(0);
+    });
+
+    it('excludes unbudgeted subcategories from category spent totals', () => {
+      const sub2 = createSubcategory(testDb, catId, 'Utilities');
+
+      setAllocation({
+        subcategoryId: subId,
+        categoryId: catId,
+        year: 2026,
+        month: 4,
+        amount: 50000,
+        applyToFutureMonths: false,
+      });
+
+      createTransaction(testDb, accountId, -12000, '2026-04-10', subId);
+      createTransaction(testDb, accountId, -7000, '2026-04-11', sub2);
+
+      const overview = getOverview(2026, 4);
+      expect(overview.categories).toHaveLength(1);
+      expect(overview.categories[0].spent).toBe(12000);
+      expect(overview.totalSpent).toBe(12000);
+      expect(overview.categories[0].subcategories).toHaveLength(1);
+      expect(overview.categories[0].subcategories[0].subcategoryId).toBe(subId);
     });
 
     it('includes rollover in available calculation', () => {

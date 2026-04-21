@@ -4,12 +4,14 @@ import { ipcMain } from 'electron';
 import {
   listTransactions,
   createTransaction,
+  createTransfer,
   updateTransaction,
   deleteTransaction,
 } from '../services/transaction-service';
 import type {
   TransactionListInput,
   CreateTransactionInput,
+  CreateTransferInput,
   UpdateTransactionInput,
 } from '../../shared/types';
 
@@ -20,6 +22,10 @@ export function registerTransactionHandlers(): void {
 
   ipcMain.handle('transactions:create', (_event, input: CreateTransactionInput) => {
     return createTransaction(input);
+  });
+
+  ipcMain.handle('transactions:createTransfer', (_event, input: CreateTransferInput) => {
+    return createTransfer(input);
   });
 
   ipcMain.handle('transactions:update', (_event, input: UpdateTransactionInput) => {

@@ -75,15 +75,16 @@ export function getSpent(subcategoryId: number | null, categoryId: number, year:
   const { firstDay, nextFirstDay } = monthBounds(year, month);
 
   if (subcategoryId === null) {
-    // Category-level: sum across all subcategories in this category
+    // Category-level: include transactions assigned directly to the category
+    // and transactions assigned through any subcategory of that category.
     const row = db.prepare(`
       SELECT COALESCE(-SUM(t.amount), 0) AS spent
       FROM transactions t
-      JOIN subcategories s ON t.subcategory_id = s.id
-      WHERE s.category_id = ?
+      LEFT JOIN subcategories s ON t.subcategory_id = s.id
+      WHERE (t.category_id = ? OR s.category_id = ?)
         AND t.date >= ?
         AND t.date < ?
-    `).get(categoryId, firstDay, nextFirstDay) as { spent: number };
+    `).get(categoryId, categoryId, firstDay, nextFirstDay) as { spent: number };
     return row.spent;
   }
 
@@ -177,18 +178,15 @@ export function getOverview(year: number, month: number): BudgetOverview {
   let totalSpent = 0;
   let totalAvailable = 0;
   const budgetCategories: BudgetCategoryRow[] = [];
+  const ym = `${year}-${month.toString().padStart(2, '0')}`;
 
   for (const cat of catMap.values()) {
     // Determine if this category uses category-level or subcategory-level budgeting
     const catLevelAlloc = getAllocation(null, cat.categoryId, year, month);
-    const hasCatLevelBudget = catLevelAlloc > 0 || hasCatLevelDefault(cat.categoryId);
-    const hasSubcatBudgets = cat.subs.some(
-      s => getAllocation(s.subcategoryId, cat.categoryId, year, month) > 0
-    );
+    const hasCatLevelBudget = hasBudgetConfigured(null, cat.categoryId, year, month, ym);
 
-    // Use category-level if there's a category-level budget set,
-    // OR if there are no subcategory budgets but there IS a category-level allocation
-    const useCategoryLevel = hasCatLevelBudget && !hasSubcatBudgets;
+    // A configured category-level budget always reviews spending at full category scope.
+    const useCategoryLevel = hasCatLevelBudget;
 
     if (useCategoryLevel) {
       const allocated = catLevelAlloc;
@@ -218,6 +216,9 @@ export function getOverview(year: number, month: number): BudgetOverview {
       const subcategoryRows: BudgetSubcategoryRow[] = [];
 
       for (const sub of cat.subs) {
+        const isSubcategoryBudgetConfigured = hasBudgetConfigured(sub.subcategoryId, cat.categoryId, year, month, ym);
+        if (!isSubcategoryBudgetConfigured) continue;
+
         const allocated = getAllocation(sub.subcategoryId, cat.categoryId, year, month);
         const rollover = getRollover(sub.subcategoryId, cat.categoryId, year, month, cache);
         const spent = getSpent(sub.subcategoryId, cat.categoryId, year, month);
@@ -268,15 +269,57 @@ export function getOverview(year: number, month: number): BudgetOverview {
   };
 }
 
-/**
- * Check whether a category has any category-level default configured.
- */
-function hasCatLevelDefault(categoryId: number): boolean {
+function hasBudgetConfigured(
+  subcategoryId: number | null,
+  categoryId: number,
+  year: number,
+  month: number,
+  ym?: string,
+): boolean {
   const db = getDb();
-  const row = db.prepare(`
-    SELECT 1 FROM budget_defaults WHERE subcategory_id IS NULL AND category_id = ? LIMIT 1
-  `).get(categoryId);
-  return row != null;
+  const effectiveMonth = ym ?? `${year}-${month.toString().padStart(2, '0')}`;
+
+  if (subcategoryId === null) {
+    const hasAllocation = db.prepare(`
+      SELECT 1
+      FROM budget_allocations
+      WHERE subcategory_id IS NULL AND category_id = ? AND year = ? AND month = ?
+        AND amount > 0
+      LIMIT 1
+    `).get(categoryId, year, month);
+
+    if (hasAllocation) return true;
+
+    const hasDefault = db.prepare(`
+      SELECT 1
+      FROM budget_defaults
+      WHERE subcategory_id IS NULL AND category_id = ? AND effective_from <= ?
+        AND amount > 0
+      LIMIT 1
+    `).get(categoryId, effectiveMonth);
+
+    return hasDefault != null;
+  }
+
+  const hasAllocation = db.prepare(`
+    SELECT 1
+    FROM budget_allocations
+    WHERE subcategory_id = ? AND category_id = ? AND year = ? AND month = ?
+      AND amount > 0
+    LIMIT 1
+  `).get(subcategoryId, categoryId, year, month);
+
+  if (hasAllocation) return true;
+
+  const hasDefault = db.prepare(`
+    SELECT 1
+    FROM budget_defaults
+    WHERE subcategory_id = ? AND category_id = ? AND effective_from <= ?
+      AND amount > 0
+    LIMIT 1
+  `).get(subcategoryId, categoryId, effectiveMonth);
+
+  return hasDefault != null;
 }
 
 /**

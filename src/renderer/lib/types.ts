@@ -13,6 +13,7 @@ export type {
   CreateAccountInput,
   UpdateAccountInput,
   CreateTransactionInput,
+  CreateTransferInput,
   UpdateTransactionInput,
   TransactionListInput,
   CategoryTransactionInput,

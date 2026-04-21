@@ -7,6 +7,10 @@ interface Props {
 }
 
 export default function TransactionRow({ transaction: tx, onEdit }: Props) {
+  const categoryDisplay = tx.transactionType === 'transfer'
+    ? `${tx.amount < 0 ? 'Transfer to' : 'Transfer from'} ${tx.transferAccountName ?? 'Unknown account'}`
+    : tx.categoryName || tx.subcategoryName || '';
+
   return (
     <tr
       onClick={() => onEdit(tx)}
@@ -24,9 +28,13 @@ export default function TransactionRow({ transaction: tx, onEdit }: Props) {
         {tx.description || <span className="italic text-[var(--color-text-muted)]">—</span>}
       </td>
       <td className="px-3 py-2 text-xs text-[var(--color-text-muted)]">
-        {tx.categoryName && tx.subcategoryName
-          ? <>{tx.categoryName} <span className="text-[var(--color-accent)]/40">›</span> {tx.subcategoryName}</>
-          : tx.categoryName || tx.subcategoryName || ''}
+        {tx.transactionType === 'transfer' ? (
+          categoryDisplay
+        ) : tx.categoryName && tx.subcategoryName ? (
+          <>{tx.categoryName} <span className="text-[var(--color-accent)]/40">›</span> {tx.subcategoryName}</>
+        ) : (
+          categoryDisplay
+        )}
       </td>
       <td
         className={`whitespace-nowrap px-3 py-2 text-right text-xs font-mono font-medium ${

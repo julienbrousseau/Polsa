@@ -30,6 +30,8 @@ export interface Transaction {
   accountId: number;
   date: string;             // YYYY-MM-DD
   amount: number;           // cents
+  transactionType: 'standard' | 'transfer';
+  transferAccountId: number | null;
   categoryId?: number | null;   // direct category (when no subcategory)
   subcategoryId: number | null;
   description: string;
@@ -39,6 +41,7 @@ export interface Transaction {
 export interface TransactionDisplay extends Transaction {
   categoryName: string | null;
   subcategoryName: string | null;
+  transferAccountName: string | null;
   runningBalance: number;   // cents
 }
 
@@ -71,6 +74,7 @@ export interface TransactionListInput {
   accountId: number;
   offset: number;
   limit: number;
+  includeReconciled?: boolean;
 }
 
 export interface CreateTransactionInput {
@@ -80,6 +84,14 @@ export interface CreateTransactionInput {
   categoryId?: number | null;
   subcategoryId?: number | null;
   description: string;
+}
+
+export interface CreateTransferInput {
+  fromAccountId: number;
+  toAccountId: number;
+  date: string;
+  amount: number;
+  description?: string;
 }
 
 export interface UpdateTransactionInput {

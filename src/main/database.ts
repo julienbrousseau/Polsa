@@ -6,6 +6,7 @@ import fs from 'fs';
 import { app } from 'electron';
 
 let db: Database.Database | null = null;
+const MAX_DB_BACKUPS = 4;
 
 export function getDbPath(): string {
   const userDataPath = app.getPath('userData');
@@ -37,6 +38,12 @@ export function initDatabase(dbPath?: string): Database.Database {
   db.pragma('foreign_keys = ON');
 
   runMigrations(db);
+
+  try {
+    createStartupBackup(resolvedPath, db);
+  } catch (err) {
+    console.warn('Database backup failed:', err);
+  }
 
   return db;
 }
@@ -105,5 +112,44 @@ function runMigrations(database: Database.Database): void {
     })();
 
     console.log(`Applied migration: ${file}`);
+  }
+}
+
+function createStartupBackup(dbPath: string, database: Database.Database): void {
+  const dbDir = path.dirname(dbPath);
+  const ext = path.extname(dbPath) || '.db';
+  const dbBase = path.basename(dbPath, ext);
+  const backupsDir = path.join(dbDir, 'backups');
+
+  if (!fs.existsSync(backupsDir)) {
+    fs.mkdirSync(backupsDir, { recursive: true });
+  }
+
+  // Flush WAL contents so the copied DB file is complete.
+  database.pragma('wal_checkpoint(TRUNCATE)');
+
+  const backupName = `${dbBase}-backup-${Date.now()}${ext}`;
+  const backupPath = path.join(backupsDir, backupName);
+  fs.copyFileSync(dbPath, backupPath);
+
+  rotateBackups(backupsDir, dbBase, ext);
+}
+
+function rotateBackups(backupsDir: string, dbBase: string, ext: string): void {
+  const backupFiles = fs.readdirSync(backupsDir)
+    .filter((name) => name.startsWith(`${dbBase}-backup-`) && name.endsWith(ext))
+    .map((name) => {
+      const fullPath = path.join(backupsDir, name);
+      const stats = fs.statSync(fullPath);
+      return {
+        name,
+        fullPath,
+        mtimeMs: stats.mtimeMs,
+      };
+    })
+    .sort((a, b) => b.mtimeMs - a.mtimeMs);
+
+  for (const file of backupFiles.slice(MAX_DB_BACKUPS)) {
+    fs.unlinkSync(file.fullPath);
   }
 }

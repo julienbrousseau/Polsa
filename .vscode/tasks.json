@@ -36,7 +36,7 @@
     {
       "label": "Package for macOS",
       "type": "shell",
-      "command": "npx electron-rebuild -f -w better-sqlite3 && npm run build && npx electron-builder --mac",
+      "command": "npx electron-rebuild -f -w better-sqlite3 && npm run package:mac",
       "group": "build",
       "problemMatcher": [],
       "presentation": { "reveal": "always" }

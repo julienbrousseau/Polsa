@@ -14,6 +14,7 @@ vi.mock('../../../src/main/database', () => ({
 import {
   listTransactions,
   createTransaction,
+  createTransfer,
   updateTransaction,
   deleteTransaction,
 } from '../../../src/main/services/transaction-service';
@@ -124,6 +125,44 @@ describe('transaction-service', () => {
       expect(result.transactions[0].categoryName).toBe('Sports');
       expect(result.transactions[0].subcategoryName).toBeNull();
     });
+
+    it('hides reconciled transactions by default', () => {
+      const tx1 = createTransaction({ accountId, date: '2024-01-10', amount: -1000, description: 'Visible' });
+      createTransaction({ accountId, date: '2024-01-11', amount: -2000, description: 'Hidden' });
+      testDb.prepare('UPDATE transactions SET reconciled = 1 WHERE id != ?').run(tx1.id);
+
+      const result = listTransactions({ accountId, offset: 0, limit: 50 });
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0].description).toBe('Visible');
+      expect(result.total).toBe(1);
+    });
+
+    it('returns reconciled transactions when includeReconciled is true', () => {
+      const tx1 = createTransaction({ accountId, date: '2024-01-10', amount: -1000, description: 'Visible' });
+      createTransaction({ accountId, date: '2024-01-11', amount: -2000, description: 'Also visible' });
+      testDb.prepare('UPDATE transactions SET reconciled = 1 WHERE id != ?').run(tx1.id);
+
+      const result = listTransactions({ accountId, offset: 0, limit: 50, includeReconciled: true });
+      expect(result.transactions).toHaveLength(2);
+      expect(result.total).toBe(2);
+    });
+
+    it('keeps running balance correct when reconciled rows are hidden', () => {
+      const newest = createTransaction({ accountId, date: '2024-01-20', amount: -2000, description: 'Newest hidden' });
+      createTransaction({ accountId, date: '2024-01-15', amount: -3000, description: 'Visible middle' });
+      createTransaction({ accountId, date: '2024-01-10', amount: 5000, description: 'Visible oldest' });
+      testDb.prepare('UPDATE transactions SET reconciled = 1 WHERE id = ?').run(newest.id);
+
+      const result = listTransactions({ accountId, offset: 0, limit: 50 });
+
+      // Account current balance includes all rows: 10000 - 2000 - 3000 + 5000 = 10000
+      // Visible middle row should still include the hidden newer reconciled row in its balance.
+      expect(result.transactions).toHaveLength(2);
+      expect(result.transactions[0].description).toBe('Visible middle');
+      expect(result.transactions[0].runningBalance).toBe(12000);
+      expect(result.transactions[1].description).toBe('Visible oldest');
+      expect(result.transactions[1].runningBalance).toBe(15000);
+    });
   });
 
   describe('createTransaction', () => {
@@ -153,6 +192,47 @@ describe('transaction-service', () => {
     });
   });
 
+  describe('createTransfer', () => {
+    it('creates paired transfer transactions across accounts', () => {
+      const savingsId = createTestAccount(testDb, 'Savings', 50000);
+
+      const result = createTransfer({
+        fromAccountId: accountId,
+        toAccountId: savingsId,
+        date: '2024-01-20',
+        amount: 2500,
+        description: 'Move to savings',
+      });
+
+      expect(result.outgoing.accountId).toBe(accountId);
+      expect(result.outgoing.amount).toBe(-2500);
+      expect(result.outgoing.transactionType).toBe('transfer');
+      expect(result.outgoing.transferAccountId).toBe(savingsId);
+
+      expect(result.incoming.accountId).toBe(savingsId);
+      expect(result.incoming.amount).toBe(2500);
+      expect(result.incoming.transactionType).toBe('transfer');
+      expect(result.incoming.transferAccountId).toBe(accountId);
+
+      const fromList = listTransactions({ accountId, offset: 0, limit: 50, includeReconciled: true });
+      expect(fromList.transactions).toHaveLength(1);
+      expect(fromList.transactions[0].transferAccountName).toBe('Savings');
+
+      const toList = listTransactions({ accountId: savingsId, offset: 0, limit: 50, includeReconciled: true });
+      expect(toList.transactions).toHaveLength(1);
+      expect(toList.transactions[0].transferAccountName).toBe('Test');
+    });
+
+    it('rejects transfers to the same account', () => {
+      expect(() => createTransfer({
+        fromAccountId: accountId,
+        toAccountId: accountId,
+        date: '2024-01-20',
+        amount: 500,
+      })).toThrow('Source and destination accounts must be different');
+    });
+  });
+
   describe('updateTransaction', () => {
     it('updates a transaction', () => {
       const tx = createTransaction({ accountId, date: '2024-01-15', amount: -1000, description: 'Old' });
@@ -166,6 +246,23 @@ describe('transaction-service', () => {
       expect(() => updateTransaction({ id: 999, date: '2024-01-15', amount: 1000, description: '' }))
         .toThrow('Transaction 999 not found');
     });
+
+    it('rejects updating a transfer transaction', () => {
+      const savingsId = createTestAccount(testDb, 'Savings', 0);
+      const transfer = createTransfer({
+        fromAccountId: accountId,
+        toAccountId: savingsId,
+        date: '2024-01-20',
+        amount: 1000,
+      });
+
+      expect(() => updateTransaction({
+        id: transfer.outgoing.id,
+        date: '2024-01-21',
+        amount: -1000,
+        description: 'Edited',
+      })).toThrow('Transfer transactions cannot be edited individually');
+    });
   });
 
   describe('deleteTransaction', () => {
@@ -178,6 +275,19 @@ describe('transaction-service', () => {
 
     it('throws for non-existent transaction', () => {
       expect(() => deleteTransaction(999)).toThrow('Transaction 999 not found');
+    });
+
+    it('rejects deleting a transfer transaction individually', () => {
+      const savingsId = createTestAccount(testDb, 'Savings', 0);
+      const transfer = createTransfer({
+        fromAccountId: accountId,
+        toAccountId: savingsId,
+        date: '2024-01-20',
+        amount: 1200,
+      });
+
+      expect(() => deleteTransaction(transfer.outgoing.id))
+        .toThrow('Transfer transactions cannot be deleted individually');
     });
   });
 });
