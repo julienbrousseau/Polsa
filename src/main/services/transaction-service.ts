@@ -229,6 +229,54 @@ export function createTransfer(input: CreateTransferInput): { outgoing: Transact
   };
 }
 
+export interface UpdateTransferInput {
+  groupId: string;
+  date: string;
+  amount: number;
+  description?: string;
+}
+
+export function updateTransfer(input: UpdateTransferInput): { outgoing: Transaction; incoming: Transaction } {
+  if (!input.groupId) throw new Error('Transfer groupId required');
+  const dateError = validateTransactionDate(input.date);
+  if (dateError) throw new Error(dateError);
+  const amountError = validateTransactionAmount(input.amount);
+  if (amountError) throw new Error(amountError);
+  if (input.amount <= 0) throw new Error('Transfer amount must be greater than zero');
+
+  const db = getDb();
+  const txs = db.prepare('SELECT id, amount FROM transactions WHERE transfer_group_id = ? ORDER BY amount').all(input.groupId) as Array<{ id: number; amount: number }>;
+  if (txs.length !== 2) throw new Error('Transfer group not found or incomplete');
+
+  const [outgoing, incoming] = txs[0].amount < 0 ? [txs[0], txs[1]] : [txs[1], txs[0]];
+  if (!outgoing || !incoming) throw new Error('Transfer group not found or incomplete');
+
+  db.transaction(() => {
+    db.prepare('UPDATE transactions SET date = ?, amount = ?, description = ? WHERE id = ?')
+      .run(input.date, -Math.abs(input.amount), input.description ?? '', outgoing.id);
+    db.prepare('UPDATE transactions SET date = ?, amount = ?, description = ? WHERE id = ?')
+      .run(input.date, Math.abs(input.amount), input.description ?? '', incoming.id);
+  })();
+
+  return {
+    outgoing: getTransaction(outgoing.id),
+    incoming: getTransaction(incoming.id),
+  };
+}
+
+export function deleteTransfer(groupId: string): void {
+  if (!groupId) throw new Error('Transfer groupId required');
+  const db = getDb();
+  const txs = db.prepare('SELECT id FROM transactions WHERE transfer_group_id = ?').all(groupId) as Array<{ id: number }>;
+  if (txs.length !== 2) throw new Error('Transfer group not found or incomplete');
+
+  db.transaction(() => {
+    for (const tx of txs) {
+      db.prepare('DELETE FROM transactions WHERE id = ?').run(tx.id);
+    }
+  })();
+}
+
 export function updateTransaction(input: UpdateTransactionInput): Transaction {
   if (!isValidInteger(input.id)) throw new Error('Invalid transaction ID');
   const amountError = validateTransactionAmount(input.amount);

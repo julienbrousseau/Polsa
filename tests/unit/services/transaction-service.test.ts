@@ -15,7 +15,9 @@ import {
   listTransactions,
   createTransaction,
   createTransfer,
+  updateTransfer,
   updateTransaction,
+  deleteTransfer,
   deleteTransaction,
 } from '../../../src/main/services/transaction-service';
 
@@ -262,6 +264,62 @@ describe('transaction-service', () => {
         amount: -1000,
         description: 'Edited',
       })).toThrow('Transfer transactions cannot be edited individually');
+    });
+  });
+
+  describe('updateTransfer', () => {
+    it('updates both sides of a transfer', () => {
+      const savingsId = createTestAccount(testDb, 'Savings', 50000);
+      const transfer = createTransfer({
+        fromAccountId: accountId,
+        toAccountId: savingsId,
+        date: '2024-01-20',
+        amount: 2500,
+        description: 'Move to savings',
+      });
+      const groupRow = testDb.prepare('SELECT transfer_group_id FROM transactions WHERE id = ?').get(transfer.outgoing.id) as { transfer_group_id: string };
+      const updated = updateTransfer({
+        groupId: groupRow.transfer_group_id,
+        date: '2024-02-01',
+        amount: 3000,
+        description: 'Updated transfer',
+      });
+      expect(updated.outgoing.date).toBe('2024-02-01');
+      expect(updated.outgoing.amount).toBe(-3000);
+      expect(updated.outgoing.description).toBe('Updated transfer');
+      expect(updated.incoming.amount).toBe(3000);
+      expect(updated.incoming.description).toBe('Updated transfer');
+    });
+
+    it('throws for missing or incomplete group', () => {
+      expect(() => updateTransfer({
+        groupId: 'not-a-real-group',
+        date: '2024-01-01',
+        amount: 1000,
+      })).toThrow('Transfer group not found or incomplete');
+    });
+  });
+
+  describe('deleteTransfer', () => {
+    it('deletes both sides of a transfer', () => {
+      const savingsId = createTestAccount(testDb, 'Savings', 50000);
+      const transfer = createTransfer({
+        fromAccountId: accountId,
+        toAccountId: savingsId,
+        date: '2024-01-20',
+        amount: 2500,
+        description: 'Move to savings',
+      });
+      const groupRow = testDb.prepare('SELECT transfer_group_id FROM transactions WHERE id = ?').get(transfer.outgoing.id) as { transfer_group_id: string };
+      deleteTransfer(groupRow.transfer_group_id);
+      const fromList = listTransactions({ accountId, offset: 0, limit: 50, includeReconciled: true });
+      const toList = listTransactions({ accountId: savingsId, offset: 0, limit: 50, includeReconciled: true });
+      expect(fromList.transactions).toHaveLength(0);
+      expect(toList.transactions).toHaveLength(0);
+    });
+
+    it('throws for missing or incomplete group', () => {
+      expect(() => deleteTransfer('not-a-real-group')).toThrow('Transfer group not found or incomplete');
     });
   });
 
