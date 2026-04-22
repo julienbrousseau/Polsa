@@ -33,7 +33,7 @@ function normalizeCategoryName(value: string): string {
   return value.trim().replace(/\s+/g, ' ');
 }
 
-function parseQifDate(raw: string, format: QifDateFormat): string {
+export function parseQifDate(raw: string, format: QifDateFormat): string {
   // Accept ISO 8601 dates directly (e.g. 2025-12-13).
   const isoMatch = raw.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
   if (isoMatch) {
@@ -63,7 +63,7 @@ function parseQifDate(raw: string, format: QifDateFormat): string {
   return `${year.padStart(4, '0')}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
 
-function parseQifAmount(raw: string): number {
+export function parseQifAmount(raw: string): number {
   // Remove commas and whitespace
   const cleaned = raw.replace(/[,\s]/g, '');
   const value = parseFloat(cleaned);
@@ -71,7 +71,7 @@ function parseQifAmount(raw: string): number {
   return Math.round(value * 100);
 }
 
-function parseQifFile(content: string, dateFormat: QifDateFormat = 'MM/DD/YYYY'): QifTransaction[] {
+export function parseQifFile(content: string, dateFormat: QifDateFormat = 'MM/DD/YYYY'): QifTransaction[] {
   const lines = content.split(/\r?\n/);
   const transactions: QifTransaction[] = [];
   let current: Partial<QifTransaction> = {};
@@ -199,13 +199,13 @@ export function importQif(input: QifImportInput): QifImportResult {
 
 // ---- Export ----
 
-function formatQifDate(isoDate: string): string {
+export function formatQifDate(isoDate: string): string {
   // Export as MM/DD/YYYY
   const [year, month, day] = isoDate.split('-');
   return `${month}/${day}/${year}`;
 }
 
-function formatQifAmount(cents: number): string {
+export function formatQifAmount(cents: number): string {
   const sign = cents < 0 ? '-' : '';
   const abs = Math.abs(cents);
   const whole = Math.floor(abs / 100);
@@ -275,6 +275,3 @@ export function exportQif(input: QifExportInput): QifExportResult {
 
   return { exported: rows.length };
 }
-
-// Exported for testing
-export { parseQifFile, parseQifDate, parseQifAmount, formatQifDate, formatQifAmount };

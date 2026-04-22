@@ -1,6 +1,7 @@
 // src/preload/index.ts
 
 import { contextBridge, ipcRenderer } from 'electron';
+import type { ImportFormat } from '../shared/types';
 
 export interface PolsaAPI {
   // Accounts
@@ -42,6 +43,11 @@ export interface PolsaAPI {
     export: (input: any) => Promise<any>;
     pickImportFile: () => Promise<string | null>;
     pickExportFile: () => Promise<string | null>;
+  };
+  imports: {
+    preview: (input: any) => Promise<any>;
+    commit: (input: any) => Promise<any>;
+    pickFile: (format: ImportFormat) => Promise<string | null>;
   };
   // Reconcile
   reconcile: {
@@ -114,6 +120,11 @@ const api: PolsaAPI = {
     export: (input) => ipcRenderer.invoke('qif:export', input),
     pickImportFile: () => ipcRenderer.invoke('qif:pick-import-file'),
     pickExportFile: () => ipcRenderer.invoke('qif:pick-export-file'),
+  },
+  imports: {
+    preview: (input) => ipcRenderer.invoke('imports:preview', input),
+    commit: (input) => ipcRenderer.invoke('imports:commit', input),
+    pickFile: (format) => ipcRenderer.invoke('imports:pick-file', format),
   },
   reconcile: {
     getBalance: (accountId) => ipcRenderer.invoke('reconcile:getBalance', accountId),

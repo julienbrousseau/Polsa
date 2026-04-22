@@ -6,6 +6,7 @@ import { initDatabase, closeDatabase } from './database';
 import { registerAccountHandlers } from './ipc/accounts';
 import { registerCategoryHandlers } from './ipc/categories';
 import { registerTransactionHandlers } from './ipc/transactions';
+import { registerImportHandlers } from './ipc/imports';
 import { registerQifHandlers } from './ipc/qif';
 import { registerRecurringHandlers } from './ipc/recurring';
 import { registerReconcileHandlers } from './ipc/reconcile';
@@ -103,6 +104,7 @@ app.whenReady().then(() => {
     registerAccountHandlers();
     registerCategoryHandlers();
     registerTransactionHandlers();
+    registerImportHandlers();
     registerQifHandlers();
     registerRecurringHandlers();
     registerReconcileHandlers();

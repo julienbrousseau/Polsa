@@ -1,11 +1,21 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { formatMoney } from '../lib/format';
-import type { Account, TransactionDisplay, CategoryWithSubs } from '../lib/types';
+import { formatDate, formatMoney } from '../lib/format';
+import type {
+  Account,
+  TransactionDisplay,
+  CategoryWithSubs,
+  ImportFormat,
+  ImportPreviewResult,
+} from '../lib/types';
 import { TRANSACTIONS_PAGE_SIZE } from '@shared/constants';
 import TransactionRow from '../components/TransactionRow';
 import InlineTransactionInput from '../components/InlineTransactionInput';
 import TransactionForm from '../components/TransactionForm';
+
+interface PendingImportPreview extends ImportPreviewResult {
+  filePath: string;
+}
 
 export default function AccountDetail() {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +30,10 @@ export default function AccountDetail() {
   const [editingTx, setEditingTx] = useState<TransactionDisplay | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [importStatus, setImportStatus] = useState<string | null>(null);
+  const [showImportChooser, setShowImportChooser] = useState(false);
+  const [pendingImportPreview, setPendingImportPreview] = useState<PendingImportPreview | null>(null);
+  const [selectedSourceAccount, setSelectedSourceAccount] = useState<string | null>(null);
+  const [isCommittingImport, setIsCommittingImport] = useState(false);
   const [showReconciled, setShowReconciled] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -149,12 +163,46 @@ export default function AccountDetail() {
     await refreshAll();
   };
 
-  const handleImport = async () => {
+  const handleImport = () => {
+    setShowImportChooser(true);
+  };
+
+  const handleImportFormatSelect = async (format: ImportFormat) => {
     try {
-      const filePath = await window.polsa.qif.pickImportFile();
+      const filePath = await window.polsa.imports.pickFile(format);
       if (!filePath) return;
+
+      setShowImportChooser(false);
+      setImportStatus('Parsing import…');
+      const preview = await window.polsa.imports.preview({ accountId, filePath, format });
+      setPendingImportPreview({ ...preview, filePath });
+      // If CSV has multiple accounts, require user to choose; otherwise auto-select
+      if (format === 'csv' && preview.sourceAccounts && preview.sourceAccounts.length > 1) {
+        setSelectedSourceAccount(null);
+      } else {
+        setSelectedSourceAccount(preview.sourceAccounts?.[0] ?? '');
+      }
+      setImportStatus(null);
+    } catch (e: any) {
+      setImportStatus(`Error: ${e.message}`);
+      setTimeout(() => setImportStatus(null), 5000);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!pendingImportPreview) return;
+
+    try {
+      setIsCommittingImport(true);
       setImportStatus('Importing…');
-      const result = await window.polsa.qif.import({ accountId, filePath });
+      const result = await window.polsa.imports.commit({
+        accountId,
+        filePath: pendingImportPreview.filePath,
+        format: pendingImportPreview.format,
+        sourceAccount: selectedSourceAccount || undefined,
+      });
+      setPendingImportPreview(null);
+      setSelectedSourceAccount(null);
       setImportStatus(`Imported ${result.imported} transaction${result.imported !== 1 ? 's' : ''}`);
       await refreshAll();
       await loadCategories();
@@ -162,6 +210,8 @@ export default function AccountDetail() {
     } catch (e: any) {
       setImportStatus(`Error: ${e.message}`);
       setTimeout(() => setImportStatus(null), 5000);
+    } finally {
+      setIsCommittingImport(false);
     }
   };
 
@@ -193,6 +243,18 @@ export default function AccountDetail() {
       </div>
     );
   }
+
+  // Filter preview transactions by the chosen source account (for CSV multi-account files)
+  const filteredPreviewTransactions = pendingImportPreview
+    ? (selectedSourceAccount
+        ? pendingImportPreview.transactions.filter((t) => t.sourceAccount === selectedSourceAccount)
+        : pendingImportPreview.transactions)
+    : [];
+  const previewRows = filteredPreviewTransactions.slice(0, 50);
+  const remainingPreviewCount = Math.max(0, filteredPreviewTransactions.length - previewRows.length);
+  const reconciledPreviewCount = filteredPreviewTransactions.filter((t) => t.reconciled).length;
+  const netTotal = filteredPreviewTransactions.reduce((sum, t) => sum + t.amount, 0);
+  const uncategorisedCount = filteredPreviewTransactions.filter((t) => !t.categoryName).length;
 
   return (
     <div className="flex h-full flex-col">
@@ -317,6 +379,191 @@ export default function AccountDetail() {
           </div>
         )}
       </div>
+
+      {showImportChooser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="glass rounded-xl border border-[var(--color-border-glass)] p-6 max-w-md w-full mx-4 space-y-4">
+            <div>
+              <h2 className="text-base font-semibold text-[var(--color-text-primary)]">Choose import format</h2>
+              <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                Select the file type to import into {account.name}.
+              </p>
+            </div>
+            <div className="grid gap-3">
+              <button
+                onClick={() => handleImportFormatSelect('qif')}
+                className="rounded-lg border border-[var(--color-border-glass)] px-4 py-3 text-left transition-all hover:bg-white/5"
+              >
+                <div className="text-sm font-medium text-[var(--color-text-primary)]">QIF import</div>
+                <div className="text-xs text-[var(--color-text-muted)]">Import transactions from a Quicken Interchange Format file.</div>
+              </button>
+              <button
+                onClick={() => handleImportFormatSelect('csv')}
+                className="rounded-lg border border-[var(--color-border-glass)] px-4 py-3 text-left transition-all hover:bg-white/5"
+              >
+                <div className="text-sm font-medium text-[var(--color-text-primary)]">CSV import</div>
+                <div className="text-xs text-[var(--color-text-muted)]">Import Date, Description, Amount, Tags, and Status from the fixed Buxfer CSV format.</div>
+              </button>
+            </div>
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setShowImportChooser(false)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] border border-[var(--color-border-glass)] hover:bg-white/5 transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Account picker — shown when CSV has multiple source accounts */}
+      {pendingImportPreview && pendingImportPreview.sourceAccounts && pendingImportPreview.sourceAccounts.length > 1 && selectedSourceAccount === null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="glass rounded-xl border border-[var(--color-border-glass)] p-6 max-w-md w-full mx-4 space-y-4">
+            <div>
+              <h2 className="text-base font-semibold text-[var(--color-text-primary)]">Choose source account</h2>
+              <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                This file contains transactions from {pendingImportPreview.sourceAccounts.length} accounts.
+                Select which account to import into {account.name}.
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-text-muted)] mb-2">Source account</label>
+              <select
+                onChange={(e) => setSelectedSourceAccount(e.currentTarget.value)}
+                className="w-full rounded-lg border border-[var(--color-border-glass)] bg-white/5 px-4 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
+              >
+                <option value="">— Select an account —</option>
+                {pendingImportPreview.sourceAccounts.map((src) => {
+                  const count = pendingImportPreview.transactions.filter((t) => t.sourceAccount === src).length;
+                  return (
+                    <option key={src} value={src}>
+                      {src} ({count} transaction{count !== 1 ? 's' : ''})
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => setPendingImportPreview(null)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] border border-[var(--color-border-glass)] hover:bg-white/5 transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingImportPreview && selectedSourceAccount !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 py-6">
+          <div className="glass rounded-xl border border-[var(--color-border-glass)] w-full max-w-5xl max-h-full overflow-hidden flex flex-col">
+            <div className="border-b border-[var(--color-border-glass)] px-6 py-4">
+              <h2 className="text-base font-semibold text-[var(--color-text-primary)]">Review import</h2>
+              <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                Confirm these {filteredPreviewTransactions.length} {pendingImportPreview.format.toUpperCase()} transaction{filteredPreviewTransactions.length !== 1 ? 's' : ''}
+                {selectedSourceAccount ? <> from <span className="font-medium text-[var(--color-text-primary)]">{selectedSourceAccount}</span></> : null}
+                {' '}before saving them into {account.name}.
+              </p>
+            </div>
+
+            <div className="grid gap-3 border-b border-[var(--color-border-glass)] px-6 py-4 md:grid-cols-5">
+              <div className="rounded-lg border border-[var(--color-border-glass)] bg-white/5 px-4 py-3">
+                <div className="text-[10px] uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Transactions</div>
+                <div className="mt-1 text-lg font-semibold text-[var(--color-text-primary)]">{filteredPreviewTransactions.length}</div>
+              </div>
+              <div className="rounded-lg border border-[var(--color-border-glass)] bg-white/5 px-4 py-3">
+                <div className="text-[10px] uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Net total</div>
+                <div className={`mt-1 text-lg font-semibold font-mono ${netTotal >= 0 ? 'text-[var(--color-positive)]' : 'text-[var(--color-negative)]'}`}>{formatMoney(netTotal)}</div>
+              </div>
+              <div className="rounded-lg border border-[var(--color-border-glass)] bg-white/5 px-4 py-3">
+                <div className="text-[10px] uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Reconciled</div>
+                <div className="mt-1 text-lg font-semibold text-[var(--color-text-primary)]">{reconciledPreviewCount}</div>
+              </div>
+              <div className="rounded-lg border border-[var(--color-border-glass)] bg-white/5 px-4 py-3">
+                <div className="text-[10px] uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Uncategorised</div>
+                <div className="mt-1 text-lg font-semibold text-[var(--color-text-primary)]">{uncategorisedCount}</div>
+              </div>
+              <div className="rounded-lg border border-[var(--color-border-glass)] bg-white/5 px-4 py-3">
+                <div className="text-[10px] uppercase tracking-[0.15em] text-[var(--color-text-muted)]">Categories to create</div>
+                <div className="mt-1 text-lg font-semibold text-[var(--color-text-primary)]">{pendingImportPreview.createdCategories.length}</div>
+              </div>
+            </div>
+
+            {pendingImportPreview.createdCategories.length > 0 && (
+              <div className="border-b border-[var(--color-border-glass)] px-6 py-3 text-sm text-[var(--color-text-muted)]">
+                Creating: {pendingImportPreview.createdCategories.join(', ')}
+              </div>
+            )}
+
+            <div className="overflow-auto px-6 py-4">
+              {pendingImportPreview.transactions.length === 0 || filteredPreviewTransactions.length === 0 ? (
+                <div className="rounded-lg border border-[var(--color-border-glass)] bg-white/5 px-4 py-8 text-center text-sm text-[var(--color-text-muted)]">
+                  No transactions were found in this file.
+                </div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[var(--color-border-glass)] text-left text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
+                      <th className="px-3 py-2">Date</th>
+                      <th className="px-3 py-2">Description</th>
+                      <th className="px-3 py-2">Category</th>
+                      <th className="px-3 py-2">Status</th>
+                      <th className="px-3 py-2 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {previewRows.map((transaction, index) => {
+                      const categoryLabel = transaction.categoryName
+                        ? transaction.subcategoryName
+                          ? `${transaction.categoryName} / ${transaction.subcategoryName}`
+                          : transaction.categoryName
+                        : 'Uncategorised';
+
+                      return (
+                        <tr key={`${transaction.date}-${transaction.description}-${transaction.amount}-${index}`} className="border-b border-[var(--color-border-glass)]/60 text-[var(--color-text-primary)] last:border-b-0">
+                          <td className="px-3 py-2 align-top text-[var(--color-text-muted)]">{formatDate(transaction.date)}</td>
+                          <td className="px-3 py-2 align-top">{transaction.description || ' '}</td>
+                          <td className="px-3 py-2 align-top text-[var(--color-text-muted)]">{categoryLabel}</td>
+                          <td className="px-3 py-2 align-top text-[var(--color-text-muted)]">{transaction.reconciled ? 'Reconciled' : 'Pending'}</td>
+                          <td className={`px-3 py-2 text-right font-mono ${transaction.amount >= 0 ? 'text-[var(--color-positive)]' : 'text-[var(--color-negative)]'}`}>
+                            {formatMoney(transaction.amount)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+
+              {remainingPreviewCount > 0 && (
+                <p className="mt-3 text-xs text-[var(--color-text-muted)]">
+                  Showing the first {previewRows.length} rows. {remainingPreviewCount} more will be imported after confirmation.
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-[var(--color-border-glass)] px-6 py-4">
+              <button
+                onClick={() => { setPendingImportPreview(null); setSelectedSourceAccount(null); }}
+                disabled={isCommittingImport}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] border border-[var(--color-border-glass)] hover:bg-white/5 transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmImport}
+                disabled={isCommittingImport || filteredPreviewTransactions.length === 0}
+                className="btn-neon rounded-lg px-4 py-2 text-sm font-semibold tracking-wide disabled:opacity-50"
+              >
+                {isCommittingImport ? 'Importing…' : 'Confirm import'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Transaction form modal */}
       {showForm && (

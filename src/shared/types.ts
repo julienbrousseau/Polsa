@@ -126,16 +126,55 @@ export interface CategoryTransactionInput {
 
 export type QifDateFormat = 'MM/DD/YYYY' | 'DD/MM/YYYY';
 
-export interface QifImportInput {
-  accountId: number;
-  filePath: string;
-  dateFormat: QifDateFormat;
+export type ImportFormat = 'qif' | 'csv';
+
+export interface ImportPreviewTransaction {
+  date: string;
+  description: string;
+  amount: number;
+  categoryName: string | null;
+  subcategoryName: string | null;
+  reconciled: boolean;
+  /** Source account name from the CSV Account column (CSV format only) */
+  sourceAccount?: string;
 }
 
-export interface QifImportResult {
+export interface ImportPreviewInput {
+  accountId: number;
+  filePath: string;
+  format: ImportFormat;
+  dateFormat?: QifDateFormat;
+}
+
+export interface ImportPreviewResult {
+  format: ImportFormat;
+  transactions: ImportPreviewTransaction[];
+  createdCategories: string[];
+  /** Unique account names found in the CSV Account column (CSV format only) */
+  sourceAccounts?: string[];
+}
+
+export interface ImportCommitInput {
+  accountId: number;
+  filePath: string;
+  format: ImportFormat;
+  dateFormat?: QifDateFormat;
+  /** Filter to only import transactions from this source account (CSV format only) */
+  sourceAccount?: string;
+}
+
+export interface ImportCommitResult {
   imported: number;
   createdCategories: string[];
 }
+
+export interface QifImportInput {
+  accountId: number;
+  filePath: string;
+  dateFormat?: QifDateFormat;
+}
+
+export type QifImportResult = ImportCommitResult;
 
 export interface QifExportInput {
   accountId: number;

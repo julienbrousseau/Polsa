@@ -9,6 +9,10 @@ let db: Database.Database | null = null;
 const MAX_DB_BACKUPS = 4;
 
 export function getDbPath(): string {
+  // Allow E2E tests to specify an exact db path
+  if (process.env.POLSA_DB_PATH) {
+    return process.env.POLSA_DB_PATH;
+  }
   const userDataPath = app.getPath('userData');
   // Use a separate dev database when POLSA_DEV_DB is set
   const filename = process.env.POLSA_DEV_DB ? 'polsa-dev.db' : 'polsa.db';
