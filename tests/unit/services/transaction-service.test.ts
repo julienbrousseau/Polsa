@@ -13,6 +13,7 @@ vi.mock('../../../src/main/database', () => ({
 
 import {
   listTransactions,
+  searchTransactions,
   createTransaction,
   createTransfer,
   updateTransfer,
@@ -164,6 +165,49 @@ describe('transaction-service', () => {
       expect(result.transactions[0].runningBalance).toBe(12000);
       expect(result.transactions[1].description).toBe('Visible oldest');
       expect(result.transactions[1].runningBalance).toBe(15000);
+    });
+  });
+
+  describe('searchTransactions', () => {
+    it('filters by plain-text description across accounts', () => {
+      const savingsId = createTestAccount(testDb, 'Savings', 25000);
+      createTransaction({ accountId, date: '2024-01-10', amount: -1200, description: 'Coffee beans' });
+      createTransaction({ accountId: savingsId, date: '2024-01-11', amount: -900, description: 'Coffee filters' });
+      createTransaction({ accountId, date: '2024-01-12', amount: -1500, description: 'Groceries' });
+
+      const result = searchTransactions({ searchText: 'coffee', offset: 0, limit: 50 });
+
+      expect(result.total).toBe(2);
+      expect(result.transactions).toHaveLength(2);
+      expect(result.transactions.map((tx) => tx.description)).toEqual(['Coffee filters', 'Coffee beans']);
+    });
+
+    it('filters by account ids and date range together', () => {
+      const savingsId = createTestAccount(testDb, 'Savings', 0);
+      createTransaction({ accountId, date: '2024-01-05', amount: -1000, description: 'Too early' });
+      createTransaction({ accountId, date: '2024-01-15', amount: -2000, description: 'Included current' });
+      createTransaction({ accountId: savingsId, date: '2024-01-18', amount: -3000, description: 'Included savings' });
+      createTransaction({ accountId: savingsId, date: '2024-02-01', amount: -4000, description: 'Too late' });
+
+      const result = searchTransactions({
+        accountIds: [accountId, savingsId],
+        dateFrom: '2024-01-10',
+        dateTo: '2024-01-31',
+        offset: 0,
+        limit: 50,
+      });
+
+      expect(result.total).toBe(2);
+      expect(result.transactions.map((tx) => tx.description)).toEqual(['Included savings', 'Included current']);
+    });
+
+    it('rejects an inverted date range', () => {
+      expect(() => searchTransactions({
+        dateFrom: '2024-02-01',
+        dateTo: '2024-01-01',
+        offset: 0,
+        limit: 50,
+      })).toThrow('Date from must be on or before date to');
     });
   });
 

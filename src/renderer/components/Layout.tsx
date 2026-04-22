@@ -55,10 +55,15 @@ export default function Layout({ children }: LayoutProps) {
     <div className="flex h-screen w-screen overflow-hidden bg-[var(--color-bg-base)]">
       {/* Sidebar */}
       <aside className={`glass flex shrink-0 flex-col border-r border-[var(--color-border-glass)] transition-all duration-300 ${collapsed ? 'w-14' : 'w-64'}`}>
-        {/* App title / drag region */}
         <div
-          className="flex h-14 items-center justify-between pl-[74px] pr-3"
+          className="h-10 shrink-0"
           style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+        />
+
+        {/* App title / nav toggle */}
+        <div
+          className={`flex items-center px-3 pb-3 ${collapsed ? 'justify-center' : 'justify-between'}`}
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
           {!collapsed && (
             <span className="px-2 text-sm font-bold tracking-[0.3em] uppercase neon-text-subtle text-[var(--color-accent-light)]">
@@ -68,7 +73,6 @@ export default function Layout({ children }: LayoutProps) {
           <button
             onClick={() => setCollapsed(!collapsed)}
             className="rounded-md p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-accent-light)] hover:bg-[var(--color-accent)]/10 transition-all duration-200"
-            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -102,6 +106,29 @@ export default function Layout({ children }: LayoutProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
                 <span className="font-medium">Dashboard</span>
+              </>
+            )}
+          </Link>
+
+          <Link
+            to="/search"
+            className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs transition-all duration-200 mb-2 ${
+              location.pathname === '/search'
+                ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent-light)] neon-border'
+                : 'text-[var(--color-text-primary)] hover:bg-[var(--color-accent)]/5 hover:text-[var(--color-accent-light)]'
+            }`}
+            title={collapsed ? 'Search transactions' : undefined}
+          >
+            {collapsed ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35m1.85-5.15a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <span className="font-medium">Search</span>
               </>
             )}
           </Link>

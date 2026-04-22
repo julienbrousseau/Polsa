@@ -6,7 +6,9 @@ import type {
   Transaction,
   TransactionDisplay,
   TransactionListResult,
+  TransactionSearchResult,
   TransactionListInput,
+  TransactionSearchInput,
   CreateTransactionInput,
   CreateTransferInput,
   UpdateTransactionInput,
@@ -117,6 +119,134 @@ export function listTransactions(input: TransactionListInput): TransactionListRe
     transactions,
     total: totalRow.total,
     balanceAtOffset,
+  };
+}
+
+export function searchTransactions(input: TransactionSearchInput): TransactionSearchResult {
+  if (!isValidInteger(input.offset) || input.offset < 0) throw new Error('Invalid offset');
+  if (!isValidInteger(input.limit) || input.limit < 1) throw new Error('Invalid limit');
+  if (input.searchText != null && typeof input.searchText !== 'string') {
+    throw new Error('Invalid search text');
+  }
+  if (input.dateFrom != null) {
+    const dateFromError = validateTransactionDate(input.dateFrom);
+    if (dateFromError) throw new Error(dateFromError);
+  }
+  if (input.dateTo != null) {
+    const dateToError = validateTransactionDate(input.dateTo);
+    if (dateToError) throw new Error(dateToError);
+  }
+  if (input.dateFrom && input.dateTo && input.dateFrom > input.dateTo) {
+    throw new Error('Date from must be on or before date to');
+  }
+  if (input.accountIds != null) {
+    if (!Array.isArray(input.accountIds)) throw new Error('Invalid account IDs');
+    for (const accountId of input.accountIds) {
+      if (!isValidInteger(accountId)) throw new Error('Invalid account IDs');
+    }
+  }
+
+  const db = getDb();
+  const params: Array<string | number> = [];
+  const whereClauses: string[] = [];
+  const trimmedSearchText = input.searchText?.trim();
+  const filteredAccountIds = input.accountIds?.filter((accountId, index, ids) => ids.indexOf(accountId) === index) ?? [];
+
+  if (trimmedSearchText) {
+    whereClauses.push('LOWER(t.description) LIKE ?');
+    params.push(`%${trimmedSearchText.toLowerCase()}%`);
+  }
+
+  if (filteredAccountIds.length > 0) {
+    const placeholders = filteredAccountIds.map(() => '?').join(', ');
+    whereClauses.push(`t.account_id IN (${placeholders})`);
+    params.push(...filteredAccountIds);
+  }
+
+  if (input.dateFrom) {
+    whereClauses.push('t.date >= ?');
+    params.push(input.dateFrom);
+  }
+
+  if (input.dateTo) {
+    whereClauses.push('t.date <= ?');
+    params.push(input.dateTo);
+  }
+
+  const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+  const totalRow = db.prepare(`
+    SELECT COUNT(*) as total
+    FROM transactions t
+    ${whereSql}
+  `).get(...params) as { total: number };
+
+  const rows = db.prepare(`
+    SELECT t.id, t.account_id, t.date, t.amount, t.transaction_type, t.transfer_account_id, t.category_id, t.subcategory_id, t.description, t.reconciled,
+           s.name as subcategory_name,
+           COALESCE(c_sub.name, c_dir.name) as category_name,
+           ta.name as transfer_account_name,
+           (
+             a.starting_balance
+             + COALESCE((
+               SELECT SUM(t3.amount)
+               FROM transactions t3
+               WHERE t3.account_id = t.account_id
+             ), 0)
+             - COALESCE((
+               SELECT SUM(t2.amount)
+               FROM transactions t2
+               WHERE t2.account_id = t.account_id
+                 AND (
+                   t2.date > t.date
+                   OR (t2.date = t.date AND t2.id > t.id)
+                 )
+             ), 0)
+           ) as running_balance
+    FROM transactions t
+    INNER JOIN accounts a ON a.id = t.account_id
+    LEFT JOIN subcategories s ON s.id = t.subcategory_id
+    LEFT JOIN categories c_sub ON c_sub.id = s.category_id
+    LEFT JOIN categories c_dir ON c_dir.id = t.category_id
+    LEFT JOIN accounts ta ON ta.id = t.transfer_account_id
+    ${whereSql}
+    ORDER BY t.date DESC, t.id DESC
+    LIMIT ? OFFSET ?
+  `).all(...params, input.limit, input.offset) as Array<{
+    id: number;
+    account_id: number;
+    date: string;
+    amount: number;
+    transaction_type: 'standard' | 'transfer';
+    transfer_account_id: number | null;
+    category_id: number | null;
+    subcategory_id: number | null;
+    description: string;
+    reconciled: number;
+    subcategory_name: string | null;
+    category_name: string | null;
+    transfer_account_name: string | null;
+    running_balance: number;
+  }>;
+
+  return {
+    transactions: rows.map((row) => ({
+      id: row.id,
+      accountId: row.account_id,
+      date: row.date,
+      amount: row.amount,
+      transactionType: row.transaction_type,
+      transferAccountId: row.transfer_account_id,
+      categoryId: row.category_id,
+      subcategoryId: row.subcategory_id,
+      description: row.description,
+      reconciled: row.reconciled === 1,
+      categoryName: row.category_name,
+      subcategoryName: row.subcategory_name,
+      transferAccountName: row.transfer_account_name,
+      runningBalance: row.running_balance,
+    })),
+    total: totalRow.total,
   };
 }
 

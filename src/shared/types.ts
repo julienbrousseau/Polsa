@@ -51,6 +51,11 @@ export interface TransactionListResult {
   balanceAtOffset: number;  // cents
 }
 
+export interface TransactionSearchResult {
+  transactions: TransactionDisplay[];
+  total: number;
+}
+
 export interface CategoryTransactionListResult {
   transactions: TransactionDisplay[];
   total: number;
@@ -75,6 +80,15 @@ export interface TransactionListInput {
   offset: number;
   limit: number;
   includeReconciled?: boolean;
+}
+
+export interface TransactionSearchInput {
+  searchText?: string;
+  accountIds?: number[];
+  dateFrom?: string;
+  dateTo?: string;
+  offset: number;
+  limit: number;
 }
 
 export interface CreateTransactionInput {

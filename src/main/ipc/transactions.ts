@@ -2,6 +2,7 @@
 
 import {
   listTransactions,
+  searchTransactions,
   createTransaction,
   createTransfer,
   updateTransfer,
@@ -11,6 +12,7 @@ import {
 } from '../services/transaction-service';
 import type {
   TransactionListInput,
+  TransactionSearchInput,
   CreateTransactionInput,
   CreateTransferInput,
   UpdateTransactionInput,
@@ -22,6 +24,10 @@ export function registerTransactionHandlers(): void {
 
   ipcMain.handle('transactions:list', (_event, input: TransactionListInput) => {
     return listTransactions(input);
+  });
+
+  ipcMain.handle('transactions:search', (_event, input: TransactionSearchInput) => {
+    return searchTransactions(input);
   });
 
   ipcMain.handle('transactions:create', (_event, input: CreateTransactionInput) => {

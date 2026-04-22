@@ -14,9 +14,12 @@ export interface PolsaAPI {
   // Transactions
   transactions: {
     list: (input: any) => Promise<any>;
+    search: (input: any) => Promise<any>;
     create: (input: any) => Promise<any>;
     createTransfer: (input: any) => Promise<any>;
     update: (input: any) => Promise<any>;
+    updateTransfer: (input: any) => Promise<any>;
+    deleteTransfer: (groupId: string) => Promise<void>;
     delete: (id: number) => Promise<void>;
   };
   // Categories
@@ -86,9 +89,12 @@ const api: PolsaAPI = {
   },
   transactions: {
     list: (input) => ipcRenderer.invoke('transactions:list', input),
+    search: (input) => ipcRenderer.invoke('transactions:search', input),
     create: (input) => ipcRenderer.invoke('transactions:create', input),
     createTransfer: (input) => ipcRenderer.invoke('transactions:createTransfer', input),
     update: (input) => ipcRenderer.invoke('transactions:update', input),
+    updateTransfer: (input) => ipcRenderer.invoke('transactions:updateTransfer', input),
+    deleteTransfer: (groupId) => ipcRenderer.invoke('transactions:deleteTransfer', groupId),
     delete: (id) => ipcRenderer.invoke('transactions:delete', id),
   },
   categories: {

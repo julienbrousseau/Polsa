@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import AccountList from './pages/AccountList';
 import AccountDetail from './pages/AccountDetail';
 import AccountForm from './pages/AccountForm';
+import Search from './pages/Search';
 import Categories from './pages/Categories';
 import CategoryDetail from './pages/CategoryDetail';
 import RecurringList from './pages/RecurringList';
@@ -18,6 +19,7 @@ export default function App() {
     <Layout>
       <Routes>
         <Route path="/" element={<Dashboard />} />
+        <Route path="/search" element={<Search />} />
         <Route path="/accounts" element={<AccountList />} />
         <Route path="/accounts/new" element={<AccountForm />} />
         <Route path="/accounts/:id" element={<AccountDetail />} />
