@@ -1,6 +1,5 @@
 // src/main/ipc/transactions.ts
 
-import { ipcMain } from 'electron';
 import {
   listTransactions,
   createTransaction,
@@ -18,6 +17,9 @@ import type {
 } from '../../shared/types';
 
 export function registerTransactionHandlers(): void {
+  // Lazily resolve ipcMain to avoid module-init order issues in packaged builds.
+  const { ipcMain } = require('electron') as typeof import('electron');
+
   ipcMain.handle('transactions:list', (_event, input: TransactionListInput) => {
     return listTransactions(input);
   });
