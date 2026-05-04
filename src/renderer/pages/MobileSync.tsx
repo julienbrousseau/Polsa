@@ -1,7 +1,14 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
 
-type SyncMode = 'menu' | 'scan' | 'server' | 'result';
+type SyncMode = 'menu' | 'select-accounts' | 'qr-send' | 'scan' | 'server' | 'result';
+type PendingAction = 'qr' | 'network';
+
+interface AccountItem {
+  id: number;
+  name: string;
+  type: string;
+}
 
 declare global {
   interface Window {
@@ -9,35 +16,40 @@ declare global {
   }
 }
 
-/** Renders a QR code onto a <canvas> element */
+/** Renders a QR code onto a <canvas> element. Shows an error message if data is too large. */
 function QrCanvas({ data, size = 256 }: { data: string; size?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [tooLarge, setTooLarge] = useState(false);
 
   useEffect(() => {
+    setTooLarge(false);
     if (!canvasRef.current || !data) return;
     QRCode.toCanvas(canvasRef.current, data, {
       width: size,
       margin: 2,
       color: { dark: '#e8e0f0', light: '#080b18' },
       errorCorrectionLevel: 'L',
-    }).catch(() => {
-      // If data too large for QR, clear the canvas
-      const ctx = canvasRef.current?.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, size, size);
-        ctx.fillStyle = '#e8e0f0';
-        ctx.font = '14px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('Data too large for QR', size / 2, size / 2);
-      }
-    });
+    }).catch(() => setTooLarge(true));
   }, [data, size]);
+
+  if (tooLarge) {
+    return (
+      <div className="flex items-center justify-center rounded-xl border border-[var(--color-negative)]/40 bg-[var(--color-negative)]/10 text-center p-6" style={{ width: size, height: size }}>
+        <p className="text-xs text-[var(--color-negative)]">
+          Payload too large for QR.<br />Use <strong>Network Sync</strong> instead.
+        </p>
+      </div>
+    );
+  }
 
   return <canvas ref={canvasRef} className="mx-auto" />;
 }
 
 export default function MobileSync() {
   const [mode, setMode] = useState<SyncMode>('menu');
+  const [pendingAction, setPendingAction] = useState<PendingAction>('qr');
+  const [accounts, setAccounts] = useState<AccountItem[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [qrData, setQrData] = useState('');
   const [scanInput, setScanInput] = useState('');
   const [serverInfo, setServerInfo] = useState<{ url: string; port: number } | null>(null);
@@ -45,6 +57,15 @@ export default function MobileSync() {
   const [resultMessage, setResultMessage] = useState('');
   const [companionUrl, setCompanionUrl] = useState('');
   const [companionError, setCompanionError] = useState('');
+
+  // Load accounts list on mount
+  useEffect(() => {
+    window.polsa.accounts.list().then((list: AccountItem[]) => {
+      const open = list.filter((a: any) => !a.isClosed);
+      setAccounts(open);
+      setSelectedIds(new Set(open.map((a: AccountItem) => a.id)));
+    }).catch(() => {});
+  }, []);
 
   // Start companion server on mount, stop on unmount
   useEffect(() => {
@@ -66,16 +87,35 @@ export default function MobileSync() {
     };
   }, []);
 
-  // Generate QR with desktop reference data for mobile to scan
-  const handleShowRefData = async () => {
+  // Generate setup QR with selected accounts + all categories (no balances)
+  const handleGenerateSetupQR = async () => {
     try {
-      const payload = await window.polsa.sync.generatePayload();
+      const ids = Array.from(selectedIds);
+      const payload = await window.polsa.sync.generateSetupPayload(ids);
       setQrData(JSON.stringify(payload));
-      setMode('scan');
-    } catch (err) {
+      setMode('qr-send');
+    } catch {
       setResultMessage('Failed to generate sync data');
       setMode('result');
     }
+  };
+
+  // Confirm account selection and proceed with the chosen action
+  const handleAccountSelectionConfirm = async () => {
+    if (pendingAction === 'qr') {
+      await handleGenerateSetupQR();
+    } else {
+      await handleStartServer();
+    }
+  };
+
+  // Toggle a single account in/out of the selection
+  const toggleAccount = (id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) { next.delete(id); } else { next.add(id); }
+      return next;
+    });
   };
 
   // Process pasted mobile QR payload
@@ -84,10 +124,9 @@ export default function MobileSync() {
       const payload = JSON.parse(scanInput);
       const result = await window.polsa.sync.importMobile(payload);
 
-      // Generate confirmation payload with synced IDs
-      const syncedIds = payload.transactions?.map((t: any) => t.id) ?? [];
+      // Generate confirmation payload with synced IDs (all accounts — this is a response, not a setup)
       const confirmPayload = await window.polsa.sync.generatePayload();
-      confirmPayload.syncedIds = syncedIds;
+      confirmPayload.syncedIds = payload.transactions?.map((t: any) => t.id) ?? [];
       setQrData(JSON.stringify(confirmPayload));
 
       setResultMessage(
@@ -101,10 +140,10 @@ export default function MobileSync() {
     }
   };
 
-  // Start local network server
+  // Start local network server with selected account IDs
   const handleStartServer = async () => {
     try {
-      const info = await window.polsa.sync.startServer();
+      const info = await window.polsa.sync.startServer(Array.from(selectedIds));
       setServerInfo(info);
       setServerUrl(info.url);
       setMode('server');
@@ -209,7 +248,7 @@ export default function MobileSync() {
 
           {/* Send data to mobile */}
           <button
-            onClick={handleShowRefData}
+            onClick={() => { setPendingAction('qr'); setMode('select-accounts'); }}
             className="glass-card w-full rounded-xl p-4 text-left hover:bg-[var(--color-bg-surface-hover)] transition-colors"
           >
             <div className="flex items-center gap-3">
@@ -220,14 +259,14 @@ export default function MobileSync() {
               </div>
               <div>
                 <p className="text-sm font-medium">Send to Mobile</p>
-                <p className="text-xs text-[var(--color-text-muted)]">Show QR with accounts & categories for mobile</p>
+                <p className="text-xs text-[var(--color-text-muted)]">Generate QR with accounts & categories</p>
               </div>
             </div>
           </button>
 
           {/* Network sync */}
           <button
-            onClick={handleStartServer}
+            onClick={() => { setPendingAction('network'); setMode('select-accounts'); }}
             className="glass-card w-full rounded-xl p-4 text-left hover:bg-[var(--color-bg-surface-hover)] transition-colors"
           >
             <div className="flex items-center gap-3">
@@ -245,6 +284,84 @@ export default function MobileSync() {
         </div>
       )}
 
+      {mode === 'select-accounts' && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setMode('menu')} className="text-sm text-[var(--color-accent-light)]">← Back</button>
+            <span className="text-sm font-medium">
+              {pendingAction === 'qr' ? 'Send to Mobile — select accounts' : 'Network Sync — select accounts'}
+            </span>
+          </div>
+          <p className="text-xs text-[var(--color-text-secondary)]">
+            Choose which accounts to include. Categories are always sent in full.
+          </p>
+          <div className="glass-card rounded-xl divide-y divide-[var(--color-border)]">
+            {accounts.map(account => (
+              <label key={account.id} className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-[var(--color-bg-surface-hover)] transition-colors">
+                <input
+                  type="checkbox"
+                  className="accent-[var(--color-accent-light)] w-4 h-4 shrink-0"
+                  checked={selectedIds.has(account.id)}
+                  onChange={() => toggleAccount(account.id)}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{account.name}</p>
+                  <p className="text-xs text-[var(--color-text-muted)] capitalize">{account.type}</p>
+                </div>
+              </label>
+            ))}
+            {accounts.length === 0 && (
+              <p className="px-4 py-3 text-xs text-[var(--color-text-muted)]">No open accounts found.</p>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSelectedIds(new Set(accounts.map(a => a.id)))}
+              className="btn-ghost flex-1 py-2 rounded-xl text-xs"
+            >
+              Select All
+            </button>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="btn-ghost flex-1 py-2 rounded-xl text-xs"
+            >
+              Clear
+            </button>
+          </div>
+          <button
+            onClick={handleAccountSelectionConfirm}
+            disabled={selectedIds.size === 0}
+            className="btn-neon w-full py-2.5 rounded-xl text-sm font-medium"
+          >
+            {pendingAction === 'qr' ? 'Generate QR' : 'Start Server'}
+          </button>
+        </div>
+      )}
+
+      {mode === 'qr-send' && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setMode('select-accounts')} className="text-sm text-[var(--color-accent-light)]">← Back</button>
+            <span className="text-sm font-medium">Send to Mobile</span>
+          </div>
+          <div className="glass-card rounded-xl p-4 text-center space-y-3">
+            <p className="text-xs text-[var(--color-text-secondary)]">
+              Scan this QR in the companion app → <strong>Sync → Receive from Desktop</strong>
+            </p>
+            <QrCanvas data={qrData} size={256} />
+            <p className="text-[10px] text-[var(--color-text-muted)]">
+              {selectedIds.size} account{selectedIds.size !== 1 ? 's' : ''} · all categories included
+            </p>
+          </div>
+          <button
+            onClick={() => { setMode('menu'); setQrData(''); }}
+            className="btn-ghost w-full py-2.5 rounded-xl text-sm"
+          >
+            Done
+          </button>
+        </div>
+      )}
+
       {mode === 'scan' && (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
@@ -254,7 +371,7 @@ export default function MobileSync() {
 
           {qrData && (
             <div className="glass-card rounded-xl p-4 text-center">
-              <p className="text-xs text-[var(--color-text-muted)] mb-3">Reference data QR for mobile</p>
+              <p className="text-xs text-[var(--color-text-muted)] mb-3">Confirmation QR for mobile</p>
               <QrCanvas data={qrData} size={256} />
             </div>
           )}

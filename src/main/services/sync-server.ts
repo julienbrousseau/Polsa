@@ -6,30 +6,41 @@ import { networkInterfaces } from 'os';
 import {
   importMobileTransactions,
   generateDesktopPayload,
+  generateSetupPayload,
   type MobileSyncPayload,
 } from './sync-service';
 
 let server: http.Server | null = null;
 const SYNC_PORT = 9876;
 
+// Skip virtual/VPN/container interfaces; prefer physical WiFi/Ethernet (en*, eth*)
 export function getLocalIP(): string {
   const nets = networkInterfaces();
-  for (const name of Object.keys(nets)) {
-    for (const net of nets[name] || []) {
+  const preferred: string[] = [];
+  const fallback: string[] = [];
+
+  for (const [name, addrs] of Object.entries(nets)) {
+    if (/^(utun|bridge|vmnet|docker|veth|virbr|tun|tap|lo)/.test(name)) continue;
+    for (const net of addrs || []) {
       if (net.family === 'IPv4' && !net.internal) {
-        return net.address;
+        if (/^(en|eth|wlan)/.test(name)) {
+          preferred.push(net.address);
+        } else {
+          fallback.push(net.address);
+        }
       }
     }
   }
-  return '127.0.0.1';
+
+  return preferred[0] ?? fallback[0] ?? '127.0.0.1';
 }
 
-export function createSyncServer(): { url: string; port: number } {
+export function createSyncServer(accountIds: number[] = []): Promise<{ url: string; port: number }> {
   if (server) {
     stopSyncServer();
   }
 
-  server = http.createServer((req, res) => {
+  const handler = (req: http.IncomingMessage, res: http.ServerResponse) => {
     // CORS headers for PWA access
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -41,9 +52,22 @@ export function createSyncServer(): { url: string; port: number } {
       return;
     }
 
+    // GET /setup — slim setup payload (accounts + categories, no balances)
+    if (req.method === 'GET' && req.url === '/setup') {
+      try {
+        const payload = generateSetupPayload(accountIds);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(payload));
+      } catch {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Internal error' }));
+      }
+      return;
+    }
+
     if (req.method === 'POST' && req.url === '/sync') {
       let body = '';
-      req.on('data', chunk => {
+      req.on('data', (chunk: Buffer) => {
         body += chunk.toString();
         // Limit body size to 1MB
         if (body.length > 1_048_576) {
@@ -65,11 +89,11 @@ export function createSyncServer(): { url: string; port: number } {
 
           const result = importMobileTransactions(payload);
           const syncedIds = payload.transactions.map(t => t.id);
-          const responsePayload = generateDesktopPayload(syncedIds);
+          const responsePayload = generateDesktopPayload(syncedIds, accountIds);
 
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(responsePayload));
-        } catch (err) {
+        } catch {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Invalid sync payload' }));
         }
@@ -77,10 +101,10 @@ export function createSyncServer(): { url: string; port: number } {
       return;
     }
 
-    // GET /sync — return reference data (for initial sync without sending transactions)
+    // GET /sync — return reference data (legacy endpoint kept for compatibility)
     if (req.method === 'GET' && req.url === '/sync') {
       try {
-        const payload = generateDesktopPayload([]);
+        const payload = generateDesktopPayload([], accountIds);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(payload));
       } catch {
@@ -92,11 +116,9 @@ export function createSyncServer(): { url: string; port: number } {
 
     // GET / — landing page for when users scan the QR in their phone browser
     if (req.method === 'GET' && (req.url === '/' || req.url === '')) {
-      try {
-        const payload = generateDesktopPayload([]);
-        const json = JSON.stringify(payload);
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end(`<!DOCTYPE html>
+      const ip = getLocalIP();
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
@@ -117,48 +139,46 @@ export function createSyncServer(): { url: string; port: number } {
       border-radius:50%;background:rgba(125,249,255,.15);color:#7df9ff;font-size:.75rem;font-weight:700;
       display:flex;align-items:center;justify-content:center}
     code{background:rgba(255,255,255,.08);padding:.15rem .4rem;border-radius:.25rem;font-size:.75rem;color:#7df9ff}
-    .data-box{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.08);border-radius:.75rem;
-      padding:.75rem;margin-top:1rem;text-align:left;max-height:12rem;overflow:auto}
-    .data-box pre{font-size:.625rem;color:#8a8494;white-space:pre-wrap;word-break:break-all}
-    button{background:linear-gradient(135deg,#7df9ff22,#b57affcc);border:1px solid #7df9ff44;
-      color:#fff;font-size:.8125rem;font-weight:600;padding:.625rem 1.5rem;border-radius:.5rem;
-      cursor:pointer;margin-top:1rem}
-    button:active{transform:scale(.97)}
   </style>
 </head>
 <body>
   <div class="card">
     <h1>✓ <span class="accent">Polsa</span> Sync Server</h1>
-    <p>This computer is ready to sync. Open the <strong>Polsa companion app</strong> on this phone to continue.</p>
+    <p>This computer is ready to sync. Open the <strong>Polsa companion app</strong> on your phone to continue.</p>
     <ol class="steps">
       <li>Open the Polsa companion app on your phone</li>
       <li>Tap <strong>Sync</strong> → <strong>Local Network</strong></li>
-      <li>Enter this URL:<br/><code>${`http://${getLocalIP()}:${SYNC_PORT}`}</code></li>
-      <li>Tap <strong>Connect & Sync</strong></li>
+      <li>Enter this URL:<br/><code>http://${ip}:${SYNC_PORT}</code></li>
+      <li>Tap <strong>Connect &amp; Sync</strong></li>
     </ol>
-    <p style="font-size:.75rem;color:#8a8494">If you haven't installed the companion app yet, check the <em>Mobile Sync</em> page in Polsa on your desktop for setup instructions.</p>
-    <details>
-      <summary style="font-size:.75rem;color:#7df9ff;cursor:pointer;margin-top:1rem">Preview sync data</summary>
-      <div class="data-box"><pre>${json.replace(/</g, '&lt;')}</pre></div>
-    </details>
   </div>
 </body>
 </html>`);
-      } catch {
-        res.writeHead(500, { 'Content-Type': 'text/plain' });
-        res.end('Internal error');
-      }
       return;
     }
 
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Not found' }));
+  };
+
+  return new Promise((resolve, reject) => {
+    const s = http.createServer(handler);
+
+    s.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EADDRINUSE') {
+        // Port already in use — assume a previous instance is still running
+        server = s;
+        resolve({ url: `http://${getLocalIP()}:${SYNC_PORT}`, port: SYNC_PORT });
+      } else {
+        reject(err);
+      }
+    });
+
+    s.listen(SYNC_PORT, () => {
+      server = s;
+      resolve({ url: `http://${getLocalIP()}:${SYNC_PORT}`, port: SYNC_PORT });
+    });
   });
-
-  server.listen(SYNC_PORT);
-
-  const ip = getLocalIP();
-  return { url: `http://${ip}:${SYNC_PORT}`, port: SYNC_PORT };
 }
 
 export function stopSyncServer(): void {

@@ -286,7 +286,16 @@ interface MobileSyncPayload {
   }[];
 }
 
-// Desktop → Mobile QR payload (confirmation)
+// Desktop → Mobile QR payload — initial setup (accounts + categories, NO balances, NO syncedIds)
+// Used by "Send to Mobile" QR. Slim payload designed to fit in a QR code.
+interface DesktopSetupPayload {
+  version: 1;
+  accounts: { id: number; name: string; type: string }[];  // no currentBalance
+  categories: { id: number; name: string }[];
+  subcategories: { id: number; categoryId: number; name: string }[];
+}
+
+// Desktop → Mobile payload — confirmation after importing transactions (network sync response)
 interface DesktopSyncPayload {
   version: 1;
   syncedIds: string[];    // mobile UUIDs confirmed received
@@ -296,19 +305,28 @@ interface DesktopSyncPayload {
 }
 ```
 
+**Key design decision:** `DesktopSetupPayload` is used for QR because it contains no balances and no `syncedIds`, making it significantly smaller and more likely to fit within QR capacity limits. `DesktopSyncPayload` is only used for network sync responses (no size limit applies).
+
+#### Account selection
+
+Before generating a "Send to Mobile" QR or starting the network sync server, the desktop presents a checklist of open accounts. Only the selected accounts are included in the payload. Categories are always sent in full.
+
 #### QR size constraints
 
 A single QR code holds ~3KB of data comfortably. For typical transactions (~100 bytes each), that's ~30 transactions per QR. If more, split into multiple QR codes scanned sequentially, with a counter ("QR 1/3", "QR 2/3", "QR 3/3").
+
+For the `DesktopSetupPayload` direction, account selection + omitting balances keeps the payload small. If a user has a very large number of categories that still won't fit, they should use Network Sync instead.
 
 ### Secondary method: Local network
 
 For larger syncs or when QR is inconvenient:
 
-1. Desktop app starts a temporary HTTP server on a local port (e.g. `http://192.168.x.x:9876`).
+1. Desktop opens the account-selection step, then starts a temporary HTTP server on port 9876.
 2. Desktop displays the URL and a QR code pointing to it.
 3. Mobile scans the QR or enters the URL → connects to the desktop over local WiFi.
-4. Sync happens via HTTP POST/GET — same payloads as QR, but no size limit.
-5. Server shuts down after sync completes.
+4. **If the companion has no pending transactions** (initial setup): it calls `GET /setup` which returns `DesktopSetupPayload` (slim, no balances).
+5. **If the companion has pending transactions**: it POSTs to `/sync` (`MobileSyncPayload`), desktop imports them and returns `DesktopSyncPayload` (with balances + syncedIds).
+6. Server shuts down when the user clicks Stop.
 
 This requires both devices on the same network but handles any payload size.
 
@@ -325,12 +343,10 @@ src/
       sync.ts                    # IPC handlers for sync operations
     services/
       sync-service.ts            # Import mobile transactions, generate payloads
+      sync-server.ts             # Local HTTP server (port 9876)
   renderer/
     pages/
-      MobileSync.tsx             # QR scanner + sync status
-    components/
-      QRCodeDisplay.tsx          # Show QR for mobile to scan
-      QRScanner.tsx              # Webcam QR scanner
+      MobileSync.tsx             # Sync page with account selection + QR/network flows
 ```
 
 ### IPC API (desktop)
@@ -338,9 +354,18 @@ src/
 | Channel | Args | Returns | Notes |
 |---------|------|---------|-------|
 | `sync:importMobile` | `MobileSyncPayload` | `{ imported: number, duplicates: number }` | Insert mobile transactions, skip duplicates by UUID |
-| `sync:generatePayload` | — | `DesktopSyncPayload` | Current accounts, categories, balances for mobile |
-| `sync:startServer` | — | `{ url: string, port: number }` | Start local sync HTTP server |
+| `sync:generatePayload` | — | `DesktopSyncPayload` | All accounts + categories with balances (used for import confirmation QR) |
+| `sync:generateSetupPayload` | `accountIds: number[]` | `DesktopSetupPayload` | Selected accounts (no balance) + all categories — used for "Send to Mobile" QR |
+| `sync:startServer` | `accountIds: number[]` | `{ url: string, port: number }` | Start local sync HTTP server with selected accounts |
 | `sync:stopServer` | — | `void` | Stop local sync server |
+
+### HTTP endpoints (sync server, port 9876)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/setup` | Returns `DesktopSetupPayload` — used by companion on initial setup (no transactions) |
+| `POST` | `/sync` | Accepts `MobileSyncPayload`, returns `DesktopSyncPayload` — used for transaction sync |
+| `GET` | `/` | Human-readable landing page with instructions |
 
 ### Sidebar addition
 

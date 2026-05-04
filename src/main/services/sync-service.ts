@@ -16,6 +16,13 @@ export interface MobileSyncPayload {
   }[];
 }
 
+export interface DesktopSetupPayload {
+  version: 1;
+  accounts: { id: number; name: string; type: string }[];
+  categories: { id: number; name: string }[];
+  subcategories: { id: number; categoryId: number; name: string }[];
+}
+
 export interface DesktopSyncPayload {
   version: 1;
   syncedIds: string[];
@@ -97,8 +104,33 @@ export function importMobileTransactions(payload: MobileSyncPayload): MobileImpo
   return { imported, duplicates };
 }
 
-export function generateDesktopPayload(syncedIds: string[]): DesktopSyncPayload {
-  const accounts = listAccounts().map(a => ({
+/**
+ * Slim payload for initial "Send to Mobile" — no balances, no syncedIds.
+ * accountIds: if non-empty, only those accounts are included.
+ */
+export function generateSetupPayload(accountIds: number[]): DesktopSetupPayload {
+  const allAccounts = listAccounts();
+  const filtered = accountIds.length > 0
+    ? allAccounts.filter(a => accountIds.includes(a.id))
+    : allAccounts;
+
+  const accounts = filtered.map(a => ({ id: a.id, name: a.name, type: a.type }));
+
+  const categoriesWithSubs = listCategories();
+  const categories = categoriesWithSubs.map(c => ({ id: c.id, name: c.name }));
+  const subcategories = categoriesWithSubs.flatMap(c =>
+    c.subcategories.map(s => ({ id: s.id, categoryId: s.categoryId, name: s.name }))
+  );
+
+  return { version: 1, accounts, categories, subcategories };
+}
+
+export function generateDesktopPayload(syncedIds: string[], accountIds: number[] = []): DesktopSyncPayload {
+  const allAccounts = listAccounts();
+  const accountsFiltered = accountIds.length > 0
+    ? allAccounts.filter(a => accountIds.includes(a.id))
+    : allAccounts;
+  const accounts = accountsFiltered.map(a => ({
     id: a.id,
     name: a.name,
     type: a.type,

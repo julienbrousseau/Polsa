@@ -81,7 +81,8 @@ export interface PolsaAPI {
   sync: {
     importMobile: (payload: any) => Promise<any>;
     generatePayload: () => Promise<any>;
-    startServer: () => Promise<any>;
+    generateSetupPayload: (accountIds: number[]) => Promise<any>;
+    startServer: (accountIds: number[]) => Promise<any>;
     stopServer: () => Promise<void>;
     startCompanion: () => Promise<{ url: string; port: number } | null>;
     stopCompanion: () => Promise<void>;
@@ -161,7 +162,8 @@ const api: PolsaAPI = {
   sync: {
     importMobile: (payload) => ipcRenderer.invoke('sync:importMobile', payload),
     generatePayload: () => ipcRenderer.invoke('sync:generatePayload'),
-    startServer: () => ipcRenderer.invoke('sync:startServer'),
+    generateSetupPayload: (accountIds) => ipcRenderer.invoke('sync:generateSetupPayload', accountIds),
+    startServer: (accountIds) => ipcRenderer.invoke('sync:startServer', accountIds),
     stopServer: () => ipcRenderer.invoke('sync:stopServer'),
     startCompanion: () => ipcRenderer.invoke('sync:startCompanion'),
     stopCompanion: () => ipcRenderer.invoke('sync:stopCompanion'),

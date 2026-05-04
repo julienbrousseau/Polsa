@@ -1,6 +1,6 @@
 // Sync logic — QR code + local network
 
-import type { MobileSyncPayload, DesktopSyncPayload, PendingTransaction } from './lib/types';
+import type { MobileSyncPayload, DesktopSyncPayload, DesktopSetupPayload, PendingTransaction } from './lib/types';
 import {
   getUnsyncedTransactions,
   markTransactionsSynced,
@@ -106,6 +106,19 @@ export async function syncViaNetwork(serverUrl: string): Promise<{
   categoriesUpdated: number;
 }> {
   const unsynced = await getUnsyncedTransactions();
+
+  // No transactions to send — use the slim GET /setup endpoint (initial setup path)
+  if (unsynced.length === 0) {
+    const response = await fetch(`${serverUrl}/setup`);
+    if (!response.ok) {
+      throw new Error(`Setup failed: ${response.status} ${response.statusText}`);
+    }
+    const setupPayload: DesktopSetupPayload = await response.json();
+    const result = await processSetupPayload(setupPayload);
+    return { syncedCount: 0, ...result };
+  }
+
+  // Has transactions — POST them and receive updated reference data
   const payload: MobileSyncPayload = {
     version: 1,
     transactions: unsynced.map(t => ({
@@ -133,6 +146,56 @@ export async function syncViaNetwork(serverUrl: string): Promise<{
 }
 
 // ── Payload parsing & validation ──
+
+export function parseSetupPayload(data: string): DesktopSetupPayload | null {
+  try {
+    const parsed = JSON.parse(data);
+    if (
+      parsed &&
+      parsed.version === 1 &&
+      Array.isArray(parsed.accounts) &&
+      Array.isArray(parsed.categories) &&
+      Array.isArray(parsed.subcategories) &&
+      !Array.isArray(parsed.syncedIds) // distinguish from DesktopSyncPayload
+    ) {
+      return parsed as DesktopSetupPayload;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// ── Setup Payload Processing (Desktop → Mobile initial setup) ──
+
+export async function processSetupPayload(payload: DesktopSetupPayload): Promise<{
+  accountsUpdated: number;
+  categoriesUpdated: number;
+}> {
+  const accounts: MobileAccount[] = payload.accounts.map(a => ({
+    id: a.id,
+    name: a.name,
+    type: a.type as MobileAccount['type'],
+    currentBalance: 0, // balance not included in setup payload
+  }));
+  await replaceAllAccounts(accounts);
+
+  const categories: MobileCategory[] = payload.categories.map(c => ({
+    id: c.id,
+    name: c.name,
+  }));
+  const subcategories: MobileSubcategory[] = payload.subcategories.map(s => ({
+    id: s.id,
+    categoryId: s.categoryId,
+    name: s.name,
+  }));
+  await replaceAllCategories(categories, subcategories);
+
+  return {
+    accountsUpdated: accounts.length,
+    categoriesUpdated: categories.length + subcategories.length,
+  };
+}
 
 export function parseDesktopPayload(data: string): DesktopSyncPayload | null {
   try {

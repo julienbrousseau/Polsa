@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { getUnsyncedTransactions } from '../db';
-import { buildSyncPayloads, syncViaNetwork, parseDesktopPayload, processDesktopPayload } from '../sync';
+import {
+  buildSyncPayloads,
+  syncViaNetwork,
+  parseSetupPayload,
+  parseDesktopPayload,
+  processSetupPayload,
+  processDesktopPayload,
+} from '../sync';
 import type { PendingTransaction, MobileSyncPayload } from '../lib/types';
 
 type SyncMode = 'menu' | 'qr-show' | 'qr-scan' | 'network' | 'done';
@@ -55,6 +62,22 @@ export default function Sync() {
   };
 
   const handleScanConfirmation = async () => {
+    // Try setup payload first (Desktop → Mobile, no syncedIds)
+    const setup = parseSetupPayload(scanInput);
+    if (setup) {
+      try {
+        const result = await processSetupPayload(setup);
+        setStatusMessage(
+          `Updated ${result.accountsUpdated} accounts and ${result.categoriesUpdated} categories.`
+        );
+        setMode('done');
+      } catch {
+        setStatusMessage('Error processing setup data.');
+      }
+      return;
+    }
+
+    // Fall back to full sync payload (Desktop confirmation after sending transactions)
     const parsed = parseDesktopPayload(scanInput);
     if (!parsed) {
       setStatusMessage('Invalid QR data. Please try again.');
@@ -78,10 +101,16 @@ export default function Sync() {
     setNetworkStatus('syncing');
     try {
       const result = await syncViaNetwork(networkUrl.trim().replace(/\/$/, ''));
-      setStatusMessage(
-        `Synced ${result.syncedCount} transaction${result.syncedCount !== 1 ? 's' : ''}. ` +
-        `Updated ${result.accountsUpdated} accounts, ${result.categoriesUpdated} categories.`
-      );
+      if (result.syncedCount === 0) {
+        setStatusMessage(
+          `Setup complete. Updated ${result.accountsUpdated} accounts and ${result.categoriesUpdated} categories.`
+        );
+      } else {
+        setStatusMessage(
+          `Synced ${result.syncedCount} transaction${result.syncedCount !== 1 ? 's' : ''}. ` +
+          `Updated ${result.accountsUpdated} accounts, ${result.categoriesUpdated} categories.`
+        );
+      }
       setNetworkStatus('success');
       setMode('done');
     } catch (err) {

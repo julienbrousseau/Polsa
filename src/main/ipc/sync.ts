@@ -4,6 +4,7 @@ import { ipcMain } from 'electron';
 import {
   importMobileTransactions,
   generateDesktopPayload,
+  generateSetupPayload,
   type MobileSyncPayload,
 } from '../services/sync-service';
 import { createSyncServer, stopSyncServer } from '../services/sync-server';
@@ -22,12 +23,16 @@ export function registerSyncHandlers(): void {
     return importMobileTransactions(payload);
   });
 
+  ipcMain.handle('sync:generateSetupPayload', (_event, accountIds: number[]) => {
+    return generateSetupPayload(Array.isArray(accountIds) ? accountIds : []);
+  });
+
   ipcMain.handle('sync:generatePayload', () => {
     return generateDesktopPayload([]);
   });
 
-  ipcMain.handle('sync:startServer', () => {
-    return createSyncServer();
+  ipcMain.handle('sync:startServer', (_event, accountIds: number[]) => {
+    return createSyncServer(Array.isArray(accountIds) ? accountIds : []);
   });
 
   ipcMain.handle('sync:stopServer', () => {
