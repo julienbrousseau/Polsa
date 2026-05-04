@@ -35,6 +35,25 @@ export interface MobileSyncPayload {
         description: string;
     }[];
 }
+/** Slim payload sent by desktop "Send to Mobile" — no balances, no syncedIds */
+export interface DesktopSetupPayload {
+    version: 1;
+    accounts: {
+        id: number;
+        name: string;
+        type: string;
+    }[];
+    categories: {
+        id: number;
+        name: string;
+    }[];
+    subcategories: {
+        id: number;
+        categoryId: number;
+        name: string;
+    }[];
+}
+/** Full payload returned after a POST /sync (transaction import) */
 export interface DesktopSyncPayload {
     version: 1;
     syncedIds: string[];

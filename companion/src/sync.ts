@@ -100,16 +100,57 @@ export async function processDesktopPayload(payload: DesktopSyncPayload): Promis
 
 // ── Local Network Sync ──
 
+function normalizeServerUrl(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) throw new Error('Please enter a sync URL');
+
+  // Allow users to paste "192.168.x.x:9876" without protocol.
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(withProtocol);
+  } catch {
+    throw new Error('Invalid sync URL. Use format: http://192.168.x.x:9876');
+  }
+
+  if (!parsed.port) {
+    parsed.port = '9876';
+  }
+
+  // Keep only origin, drop any pasted path/query/hash.
+  return parsed.origin;
+}
+
+async function ensureServerReachable(baseUrl: string): Promise<void> {
+  try {
+    const response = await fetch(`${baseUrl}/health`);
+    if (response.ok) return;
+  } catch (err) {
+    if (err instanceof TypeError && window.isSecureContext && baseUrl.startsWith('http://')) {
+      throw new Error(
+        'Connection blocked by browser security (HTTPS app -> HTTP local server). Open the companion from the desktop local URL, then retry network sync.'
+      );
+    }
+    throw new Error('Cannot reach desktop sync server. Check WiFi, URL, and that server is running.');
+  }
+
+  throw new Error('Desktop sync server responded unexpectedly. Restart sync server on desktop and try again.');
+}
+
 export async function syncViaNetwork(serverUrl: string): Promise<{
   syncedCount: number;
   accountsUpdated: number;
   categoriesUpdated: number;
 }> {
+  const baseUrl = normalizeServerUrl(serverUrl);
+  await ensureServerReachable(baseUrl);
+
   const unsynced = await getUnsyncedTransactions();
 
   // No transactions to send — use the slim GET /setup endpoint (initial setup path)
   if (unsynced.length === 0) {
-    const response = await fetch(`${serverUrl}/setup`);
+    const response = await fetch(`${baseUrl}/setup`);
     if (!response.ok) {
       throw new Error(`Setup failed: ${response.status} ${response.statusText}`);
     }
@@ -131,7 +172,7 @@ export async function syncViaNetwork(serverUrl: string): Promise<{
     })),
   };
 
-  const response = await fetch(`${serverUrl}/sync`, {
+  const response = await fetch(`${baseUrl}/sync`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

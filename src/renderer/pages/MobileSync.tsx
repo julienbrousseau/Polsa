@@ -147,8 +147,8 @@ export default function MobileSync() {
       setServerInfo(info);
       setServerUrl(info.url);
       setMode('server');
-    } catch {
-      setResultMessage('Failed to start sync server');
+    } catch (err) {
+      setResultMessage(err instanceof Error ? err.message : 'Failed to start sync server');
       setMode('result');
     }
   };

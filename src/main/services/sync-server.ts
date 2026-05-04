@@ -12,6 +12,7 @@ import {
 
 let server: http.Server | null = null;
 const SYNC_PORT = 9876;
+const SYNC_HOST = '0.0.0.0';
 
 // Skip virtual/VPN/container interfaces; prefer physical WiFi/Ethernet (en*, eth*)
 export function getLocalIP(): string {
@@ -40,6 +41,8 @@ export function createSyncServer(accountIds: number[] = []): Promise<{ url: stri
     stopSyncServer();
   }
 
+  let currentPort = SYNC_PORT;
+
   const handler = (req: http.IncomingMessage, res: http.ServerResponse) => {
     // CORS headers for PWA access
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -62,6 +65,13 @@ export function createSyncServer(accountIds: number[] = []): Promise<{ url: stri
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Internal error' }));
       }
+      return;
+    }
+
+    // GET /health — lightweight connectivity check for companion
+    if (req.method === 'GET' && req.url === '/health') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
       return;
     }
 
@@ -148,7 +158,7 @@ export function createSyncServer(accountIds: number[] = []): Promise<{ url: stri
     <ol class="steps">
       <li>Open the Polsa companion app on your phone</li>
       <li>Tap <strong>Sync</strong> → <strong>Local Network</strong></li>
-      <li>Enter this URL:<br/><code>http://${ip}:${SYNC_PORT}</code></li>
+      <li>Enter this URL:<br/><code>http://${ip}:${currentPort}</code></li>
       <li>Tap <strong>Connect &amp; Sync</strong></li>
     </ol>
   </div>
@@ -163,20 +173,23 @@ export function createSyncServer(accountIds: number[] = []): Promise<{ url: stri
 
   return new Promise((resolve, reject) => {
     const s = http.createServer(handler);
+    const resolveWithAddress = () => {
+      const addr = s.address();
+      const port = typeof addr === 'object' && addr ? addr.port : SYNC_PORT;
+      server = s;
+      resolve({ url: `http://${getLocalIP()}:${port}`, port });
+    };
 
     s.on('error', (err: NodeJS.ErrnoException) => {
       if (err.code === 'EADDRINUSE') {
-        // Port already in use — assume a previous instance is still running
-        server = s;
-        resolve({ url: `http://${getLocalIP()}:${SYNC_PORT}`, port: SYNC_PORT });
+        reject(new Error(`Sync server port ${SYNC_PORT} is already in use.`));
       } else {
         reject(err);
       }
     });
 
-    s.listen(SYNC_PORT, () => {
-      server = s;
-      resolve({ url: `http://${getLocalIP()}:${SYNC_PORT}`, port: SYNC_PORT });
+    s.listen(SYNC_PORT, SYNC_HOST, () => {
+      resolveWithAddress();
     });
   });
 }

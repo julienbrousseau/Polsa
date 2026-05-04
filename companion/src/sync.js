@@ -73,6 +73,17 @@ export async function processDesktopPayload(payload) {
 // ── Local Network Sync ──
 export async function syncViaNetwork(serverUrl) {
     const unsynced = await getUnsyncedTransactions();
+    // No transactions to send — use the slim GET /setup endpoint (initial setup path)
+    if (unsynced.length === 0) {
+        const response = await fetch(`${serverUrl}/setup`);
+        if (!response.ok) {
+            throw new Error(`Setup failed: ${response.status} ${response.statusText}`);
+        }
+        const setupPayload = await response.json();
+        const result = await processSetupPayload(setupPayload);
+        return { syncedCount: 0, ...result };
+    }
+    // Has transactions — POST them and receive updated reference data
     const payload = {
         version: 1,
         transactions: unsynced.map(t => ({
@@ -96,6 +107,48 @@ export async function syncViaNetwork(serverUrl) {
     return processDesktopPayload(desktopPayload);
 }
 // ── Payload parsing & validation ──
+export function parseSetupPayload(data) {
+    try {
+        const parsed = JSON.parse(data);
+        if (parsed &&
+            parsed.version === 1 &&
+            Array.isArray(parsed.accounts) &&
+            Array.isArray(parsed.categories) &&
+            Array.isArray(parsed.subcategories) &&
+            !Array.isArray(parsed.syncedIds) // distinguish from DesktopSyncPayload
+        ) {
+            return parsed;
+        }
+        return null;
+    }
+    catch {
+        return null;
+    }
+}
+// ── Setup Payload Processing (Desktop → Mobile initial setup) ──
+export async function processSetupPayload(payload) {
+    const accounts = payload.accounts.map(a => ({
+        id: a.id,
+        name: a.name,
+        type: a.type,
+        currentBalance: 0, // balance not included in setup payload
+    }));
+    await replaceAllAccounts(accounts);
+    const categories = payload.categories.map(c => ({
+        id: c.id,
+        name: c.name,
+    }));
+    const subcategories = payload.subcategories.map(s => ({
+        id: s.id,
+        categoryId: s.categoryId,
+        name: s.name,
+    }));
+    await replaceAllCategories(categories, subcategories);
+    return {
+        accountsUpdated: accounts.length,
+        categoriesUpdated: categories.length + subcategories.length,
+    };
+}
 export function parseDesktopPayload(data) {
     try {
         const parsed = JSON.parse(data);
