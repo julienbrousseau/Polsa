@@ -2,7 +2,7 @@
 
 import { getDb } from '../database';
 import type { Category, CategoryWithSubs, Subcategory, CategoryTransactionInput, CategoryTransactionListResult, TransactionDisplay } from '../../shared/types';
-import { validateCategoryName, isValidInteger } from '../../shared/validation';
+import { validateCategoryName, isValidInteger, validateTransactionDate } from '../../shared/validation';
 
 export function listCategories(): CategoryWithSubs[] {
   const db = getDb();
@@ -95,23 +95,45 @@ export function deleteSubcategory(id: number): void {
 export function listCategoryTransactions(input: CategoryTransactionInput): CategoryTransactionListResult {
   if (!isValidInteger(input.offset) || input.offset < 0) throw new Error('Invalid offset');
   if (!isValidInteger(input.limit) || input.limit < 1) throw new Error('Invalid limit');
+  if (input.dateFrom != null) {
+    const dateFromError = validateTransactionDate(input.dateFrom);
+    if (dateFromError) throw new Error(dateFromError);
+  }
+  if (input.dateTo != null) {
+    const dateToError = validateTransactionDate(input.dateTo);
+    if (dateToError) throw new Error(dateToError);
+  }
+  if (input.dateFrom && input.dateTo && input.dateFrom > input.dateTo) {
+    throw new Error('Date from must be on or before date to');
+  }
 
   const db = getDb();
 
-  let whereClause: string;
-  let params: any[];
+  const whereClauses: string[] = [];
+  const params: any[] = [];
 
   if (input.subcategoryId != null) {
     // Specific subcategory
-    whereClause = 't.subcategory_id = ?';
-    params = [input.subcategoryId];
+    whereClauses.push('t.subcategory_id = ?');
+    params.push(input.subcategoryId);
   } else if (input.categoryId != null) {
     // Category-level transactions + all subcategories of a category
-    whereClause = '(s.category_id = ? OR t.category_id = ?)';
-    params = [input.categoryId, input.categoryId];
+    whereClauses.push('(s.category_id = ? OR t.category_id = ?)');
+    params.push(input.categoryId, input.categoryId);
   } else {
     throw new Error('Either categoryId or subcategoryId is required');
   }
+
+  if (input.dateFrom) {
+    whereClauses.push('t.date >= ?');
+    params.push(input.dateFrom);
+  }
+  if (input.dateTo) {
+    whereClauses.push('t.date <= ?');
+    params.push(input.dateTo);
+  }
+
+  const whereClause = whereClauses.join(' AND ');
 
   const totalRow = db.prepare(`
     SELECT COUNT(*) as total

@@ -1,6 +1,6 @@
 {
   "name": "polsa",
-  "version": "0.1.7",
+  "version": "0.1.12",
   "description": "Personal finance desktop app",
   "main": "dist/main/index.js",
   "type": "commonjs",

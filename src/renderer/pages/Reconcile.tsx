@@ -152,12 +152,37 @@ export default function Reconcile() {
   };
 
   // Transaction form handlers (add / edit / delete during reconciliation)
-  const handleFormSave = async (tx: { id?: number; date: string; amount: number; subcategoryId: number | null; description: string }) => {
+  const handleFormSave = async (tx:
+    | { id?: number; type: 'standard'; date: string; amount: number; categoryId: number | null; subcategoryId: number | null; description: string }
+    | { type: 'transfer'; date: string; amount: number; toAccountId: number; description: string }
+  ) => {
     if (!accountId) return;
-    if (tx.id) {
-      await window.polsa.transactions.update(tx);
+    if (tx.type === 'transfer') {
+      await window.polsa.transactions.createTransfer({
+        fromAccountId: accountId,
+        toAccountId: tx.toAccountId,
+        date: tx.date,
+        amount: tx.amount,
+        description: tx.description,
+      });
+    } else if (tx.id) {
+      await window.polsa.transactions.update({
+        id: tx.id,
+        date: tx.date,
+        amount: tx.amount,
+        categoryId: tx.categoryId,
+        subcategoryId: tx.subcategoryId,
+        description: tx.description,
+      });
     } else {
-      await window.polsa.transactions.create({ accountId, ...tx });
+      await window.polsa.transactions.create({
+        accountId,
+        date: tx.date,
+        amount: tx.amount,
+        categoryId: tx.categoryId,
+        subcategoryId: tx.subcategoryId,
+        description: tx.description,
+      });
     }
     await refreshAll();
     // Reload accounts list in case balance changed
@@ -405,6 +430,7 @@ export default function Reconcile() {
       {showForm && accountId && (
         <TransactionForm
           accountId={accountId}
+          accounts={accounts}
           categories={categories}
           transaction={editingTx}
           onSave={handleFormSave}

@@ -171,11 +171,15 @@ export default function MobileSync() {
               <div className="pt-2 space-y-3 text-xs text-[var(--color-text-secondary)]">
                 <div className="space-y-2">
                   <p className="font-semibold text-[var(--color-text-primary)]">Install as an app</p>
-                  <p>After scanning the QR, install it as a home-screen app:</p>
+                  <p>After scanning the QR, try installing it as a home-screen app:</p>
                   <ul className="list-disc list-inside space-y-1 ml-1">
                     <li><strong>iPhone (Safari):</strong> Tap the Share button → <em>Add to Home Screen</em></li>
                     <li><strong>Android (Chrome):</strong> Tap the menu (⋮) → <em>Install app</em> or <em>Add to Home Screen</em></li>
                   </ul>
+                  <p>
+                    If install is not offered from this local URL, install first from your HTTPS hosted companion URL
+                    (for example GitHub Pages), then use this local QR URL for sync only.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <p className="font-semibold text-[var(--color-text-primary)]">First sync</p>

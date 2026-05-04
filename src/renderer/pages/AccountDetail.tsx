@@ -280,24 +280,28 @@ export default function AccountDetail() {
           </div>
         </div>
         <div className="flex gap-1.5">
-          <button
-            onClick={handleImport}
-            className="btn-ghost rounded-lg px-3 py-1.5 text-xs"
-          >
-            Import
-          </button>
+          {!account.isClosed && (
+            <button
+              onClick={handleImport}
+              className="btn-ghost rounded-lg px-3 py-1.5 text-xs"
+            >
+              Import
+            </button>
+          )}
           <button
             onClick={handleExport}
             className="btn-ghost rounded-lg px-3 py-1.5 text-xs"
           >
             Export
           </button>
-          <button
-            onClick={() => { setEditingTx(null); setShowForm(true); }}
-            className="btn-neon rounded-lg px-3 py-1.5 text-xs font-semibold tracking-wide"
-          >
-            + Transaction
-          </button>
+          {!account.isClosed && (
+            <button
+              onClick={() => { setEditingTx(null); setShowForm(true); }}
+              className="btn-neon rounded-lg px-3 py-1.5 text-xs font-semibold tracking-wide"
+            >
+              + Transaction
+            </button>
+          )}
           <button
             onClick={() => navigate(`/accounts/${id}/edit`)}
             className="btn-ghost rounded-lg px-3 py-1.5 text-xs"
@@ -306,6 +310,20 @@ export default function AccountDetail() {
           </button>
         </div>
       </div>
+
+      {/* Closed account banner */}
+      {account.isClosed && (
+        <div className="mb-3 rounded-lg px-4 py-2 text-xs flex-shrink-0 bg-[var(--color-text-muted)]/10 border border-[var(--color-text-muted)]/20 text-[var(--color-text-muted)]">
+          This account is closed. Transactions are read-only. Go to{' '}
+          <button
+            onClick={() => navigate(`/accounts/${id}/edit`)}
+            className="underline hover:text-[var(--color-accent-light)] transition-colors"
+          >
+            Edit
+          </button>{' '}
+          to reopen it.
+        </div>
+      )}
 
       <div className="mb-3 flex items-center justify-end flex-shrink-0">
         <label className="flex cursor-pointer items-center gap-2 text-xs text-[var(--color-text-muted)]">
@@ -348,12 +366,14 @@ export default function AccountDetail() {
             </tr>
           </thead>
           <tbody>
-            {/* Inline quick-add row */}
-            <InlineTransactionInput
-              accountId={accountId}
-              categories={categories}
-              onSave={handleInlineAdd}
-            />
+            {/* Inline quick-add row — hidden for closed accounts */}
+            {!account.isClosed && (
+              <InlineTransactionInput
+                accountId={accountId}
+                categories={categories}
+                onSave={handleInlineAdd}
+              />
+            )}
 
             {transactions.map((tx) => (
               <TransactionRow
@@ -366,7 +386,7 @@ export default function AccountDetail() {
             {transactions.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-3 py-8 text-center text-xs text-[var(--color-text-muted)]">
-                  No transactions yet. Use the row above to add your first.
+                  {account.isClosed ? 'No transactions.' : 'No transactions yet. Use the row above to add your first.'}
                 </td>
               </tr>
             )}

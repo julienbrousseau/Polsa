@@ -18,6 +18,7 @@ export default function AccountForm() {
   const [name, setName] = useState('');
   const [type, setType] = useState<AccountType>('checking');
   const [startingBalanceStr, setStartingBalanceStr] = useState('0.00');
+  const [isClosed, setIsClosed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(isEdit);
@@ -30,6 +31,7 @@ export default function AccountForm() {
           setName(account.name);
           setType(account.type);
           setStartingBalanceStr((account.startingBalance / 100).toFixed(2));
+          setIsClosed(account.isClosed ?? false);
         } catch (err: any) {
           setError(err.message || 'Failed to load account');
         } finally {
@@ -91,6 +93,28 @@ export default function AccountForm() {
       navigate('/');
     } catch (err: any) {
       setError(err.message || 'Failed to delete account');
+    }
+  };
+
+  const handleCloseAccount = async () => {
+    if (!id) return;
+    const confirmed = window.confirm('Close this account? It will be hidden from the main accounts list but its transactions will be preserved.');
+    if (!confirmed) return;
+    try {
+      await window.polsa.accounts.close(Number(id));
+      navigate('/');
+    } catch (err: any) {
+      setError(err.message || 'Failed to close account');
+    }
+  };
+
+  const handleReopenAccount = async () => {
+    if (!id) return;
+    try {
+      await window.polsa.accounts.reopen(Number(id));
+      navigate(`/accounts/${id}`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to reopen account');
     }
   };
 
@@ -194,6 +218,32 @@ export default function AccountForm() {
             </button>
           )}
         </div>
+
+        {/* Close / Reopen */}
+        {isEdit && (
+          <div className="mt-4 border-t border-[var(--color-border-glass)] pt-4 flex items-center justify-between">
+            <span className="text-xs text-[var(--color-text-muted)]">
+              {isClosed ? 'This account is closed.' : 'Close this account to hide it from the sidebar.'}
+            </span>
+            {isClosed ? (
+              <button
+                type="button"
+                onClick={handleReopenAccount}
+                className="rounded-xl px-4 py-2 text-xs text-[var(--color-accent-light)] border border-[var(--color-accent)]/30 hover:bg-[var(--color-accent)]/10 transition-all"
+              >
+                Reopen account
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleCloseAccount}
+                className="rounded-xl px-4 py-2 text-xs text-[var(--color-text-muted)] border border-[var(--color-border-glass)] hover:bg-white/5 transition-all"
+              >
+                Close account
+              </button>
+            )}
+          </div>
+        )}
       </form>
     </div>
   );

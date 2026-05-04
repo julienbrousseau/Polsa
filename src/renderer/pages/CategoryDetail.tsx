@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { formatMoney, formatDate } from '../lib/format';
 import type { TransactionDisplay, CategoryWithSubs } from '../lib/types';
@@ -12,6 +12,25 @@ export default function CategoryDetail() {
   const categoryId = Number(id);
   const subIdParam = searchParams.get('sub');
   const subcategoryId = subIdParam ? Number(subIdParam) : null;
+  const yearParam = searchParams.get('year');
+  const monthParam = searchParams.get('month');
+  const filterYear = yearParam ? Number(yearParam) : null;
+  const filterMonth = monthParam ? Number(monthParam) : null;
+
+  const monthDateRange = useMemo(() => {
+    if (!(filterYear && filterMonth && filterMonth >= 1 && filterMonth <= 12)) {
+      return null;
+    }
+
+    const dateFrom = `${filterYear}-${filterMonth.toString().padStart(2, '0')}-01`;
+    const nextMonth = filterMonth === 12 ? 1 : filterMonth + 1;
+    const nextYear = filterMonth === 12 ? filterYear + 1 : filterYear;
+    const nextFirstDay = `${nextYear}-${nextMonth.toString().padStart(2, '0')}-01`;
+    const dateTo = new Date(new Date(nextFirstDay).getTime() - 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    return { dateFrom, dateTo };
+  }, [filterYear, filterMonth]);
 
   const [transactions, setTransactions] = useState<TransactionDisplay[]>([]);
   const [total, setTotal] = useState(0);
@@ -40,8 +59,8 @@ export default function CategoryDetail() {
   const loadTransactions = useCallback(async (offset = 0, append = false) => {
     try {
       const input = subcategoryId
-        ? { subcategoryId, offset, limit: TRANSACTIONS_PAGE_SIZE }
-        : { categoryId, offset, limit: TRANSACTIONS_PAGE_SIZE };
+        ? { subcategoryId, offset, limit: TRANSACTIONS_PAGE_SIZE, ...(monthDateRange ?? {}) }
+        : { categoryId, offset, limit: TRANSACTIONS_PAGE_SIZE, ...(monthDateRange ?? {}) };
       const result = await window.polsa.categories.transactions(input);
       if (append) {
         setTransactions((prev) => [...prev, ...result.transactions]);
@@ -52,7 +71,7 @@ export default function CategoryDetail() {
     } catch {
       // ignore
     }
-  }, [categoryId, subcategoryId]);
+  }, [categoryId, subcategoryId, monthDateRange]);
 
   useEffect(() => {
     setLoading(true);
@@ -85,6 +104,9 @@ export default function CategoryDetail() {
   const title = subcategoryId
     ? `${categoryName} › ${subcategoryName}`
     : categoryName;
+  const periodLabel = monthDateRange
+    ? `${monthDateRange.dateFrom.slice(0, 7)}`
+    : null;
 
   return (
     <div className="flex h-full flex-col">
@@ -92,7 +114,7 @@ export default function CategoryDetail() {
         <div>
           <h1 className="text-sm font-bold uppercase tracking-[0.15em] neon-text-subtle text-[var(--color-accent-light)]">{title}</h1>
           <p className="mt-1 text-[10px] text-[var(--color-text-muted)]">
-            {total} txn{total !== 1 ? 's' : ''} across all accounts
+            {total} txn{total !== 1 ? 's' : ''} across all accounts{periodLabel ? ` · ${periodLabel}` : ''}
           </p>
         </div>
         <button

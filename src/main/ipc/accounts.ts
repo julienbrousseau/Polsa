@@ -1,11 +1,13 @@
-// src/main/ipc/accounts.ts
-
 import { ipcMain } from 'electron';
-import { listAccounts, getAccount, createAccount, updateAccount, deleteAccount } from '../services/account-service';
+import { listAccounts, listOpenAccounts, getAccount, createAccount, updateAccount, deleteAccount, closeAccount, reopenAccount } from '../services/account-service';
 
 export function registerAccountHandlers(): void {
   ipcMain.handle('accounts:list', () => {
     return listAccounts();
+  });
+
+  ipcMain.handle('accounts:listOpen', () => {
+    return listOpenAccounts();
   });
 
   ipcMain.handle('accounts:get', (_event, id: number) => {
@@ -22,5 +24,13 @@ export function registerAccountHandlers(): void {
 
   ipcMain.handle('accounts:delete', (_event, id: number) => {
     return deleteAccount(id);
+  });
+
+  ipcMain.handle('accounts:close', (_event, id: number) => {
+    return closeAccount(id);
+  });
+
+  ipcMain.handle('accounts:reopen', (_event, id: number) => {
+    return reopenAccount(id);
   });
 }

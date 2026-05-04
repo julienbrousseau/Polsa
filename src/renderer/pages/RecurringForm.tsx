@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import type { Account, CategoryWithSubs, RecurrenceFrequency } from '../lib/types';
+import type { Account, CategoryWithSubs, RecurrenceFrequency, RecurringTransactionType } from '../lib/types';
 import { todayISO } from '../lib/format';
 import { RECURRENCE_FREQUENCIES } from '@shared/constants';
 
@@ -22,6 +22,8 @@ export default function RecurringForm() {
   const [categories, setCategories] = useState<CategoryWithSubs[]>([]);
 
   const [accountId, setAccountId] = useState<number | ''>('');
+  const [transactionType, setTransactionType] = useState<RecurringTransactionType>('standard');
+  const [transferAccountId, setTransferAccountId] = useState<number | ''>('');
   const [description, setDescription] = useState('');
   const [amountStr, setAmountStr] = useState('');
   const [isExpense, setIsExpense] = useState(true);
@@ -62,9 +64,11 @@ export default function RecurringForm() {
           setAmountStr((Math.abs(rec.amount) / 100).toFixed(2));
           setIsExpense(rec.amount < 0);
           setAccountId(rec.accountId);
+          setTransactionType(rec.transactionType);
+          setTransferAccountId(rec.transferAccountId ?? '');
           setFrequency(rec.frequency);
           setNextDate(rec.nextDate);
-          if (rec.subcategoryId) {
+          if (rec.transactionType === 'standard' && rec.subcategoryId) {
             // Find which category this subcategory belongs to
             for (const cat of categories) {
               const sub = cat.subcategories.find((s) => s.id === rec.subcategoryId);
@@ -98,20 +102,35 @@ export default function RecurringForm() {
       setError('Account is required');
       return;
     }
+    if (transactionType === 'transfer') {
+      if (!transferAccountId) {
+        setError('Target account is required for transfers');
+        return;
+      }
+      if (Number(transferAccountId) === Number(accountId)) {
+        setError('Source and target accounts must be different');
+        return;
+      }
+    }
     const parsed = parseFloat(amountStr);
     if (isNaN(parsed) || parsed <= 0) {
       setError('Amount must be a positive number');
       return;
     }
 
-    const amountCents = Math.round(parsed * 100) * (isExpense ? -1 : 1);
-    const subcategoryId = selectedSubcategoryId || undefined;
+    const amountCents = transactionType === 'transfer'
+      ? Math.round(parsed * 100)
+      : Math.round(parsed * 100) * (isExpense ? -1 : 1);
+    const subcategoryId = transactionType === 'transfer' ? undefined : (selectedSubcategoryId || undefined);
 
     setLoading(true);
     try {
       if (isEdit) {
         await window.polsa.recurring.update({
           id: Number(id),
+          accountId: Number(accountId),
+          transactionType,
+          transferAccountId: transactionType === 'transfer' ? Number(transferAccountId) : null,
           description: description.trim(),
           amount: amountCents,
           subcategoryId: subcategoryId ?? null,
@@ -121,6 +140,8 @@ export default function RecurringForm() {
       } else {
         await window.polsa.recurring.create({
           accountId: Number(accountId),
+          transactionType,
+          transferAccountId: transactionType === 'transfer' ? Number(transferAccountId) : undefined,
           description: description.trim(),
           amount: amountCents,
           subcategoryId,
@@ -178,17 +199,19 @@ export default function RecurringForm() {
             Amount
           </span>
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setIsExpense(!isExpense)}
-              className={`flex-shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
-                isExpense
-                  ? 'bg-[var(--color-negative)]/15 text-[var(--color-negative)] border border-[var(--color-negative)]/30'
-                  : 'bg-[var(--color-positive)]/15 text-[var(--color-positive)] border border-[var(--color-positive)]/30'
-              }`}
-            >
-              {isExpense ? '−' : '+'}
-            </button>
+            {transactionType === 'standard' && (
+              <button
+                type="button"
+                onClick={() => setIsExpense(!isExpense)}
+                className={`flex-shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
+                  isExpense
+                    ? 'bg-[var(--color-negative)]/15 text-[var(--color-negative)] border border-[var(--color-negative)]/30'
+                    : 'bg-[var(--color-positive)]/15 text-[var(--color-positive)] border border-[var(--color-positive)]/30'
+                }`}
+              >
+                {isExpense ? '−' : '+'}
+              </button>
+            )}
             <div className="relative flex-1">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono text-[var(--color-accent-light)] opacity-60">
                 £
@@ -205,16 +228,39 @@ export default function RecurringForm() {
           </div>
         </label>
 
+        <label className="mb-4 block">
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+            Type
+          </span>
+          <select
+            value={transactionType}
+            onChange={(e) => {
+              const nextType = e.target.value as RecurringTransactionType;
+              setTransactionType(nextType);
+              if (nextType === 'transfer') {
+                setSelectedCategoryId('');
+                setSelectedSubcategoryId('');
+                setIsExpense(true);
+              } else {
+                setTransferAccountId('');
+              }
+            }}
+            className="input-cyber w-full rounded-lg px-3 py-2 text-xs [color-scheme:dark]"
+          >
+            <option value="standard">Payment / Income</option>
+            <option value="transfer">Transfer</option>
+          </select>
+        </label>
+
         {/* Account */}
         <label className="mb-4 block">
           <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-            Account
+            {transactionType === 'transfer' ? 'Source Account' : 'Account'}
           </span>
           <select
             value={accountId}
-            onChange={(e) => setAccountId(Number(e.target.value))}
+            onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : '')}
             className="input-cyber w-full rounded-lg px-3 py-2 text-xs [color-scheme:dark]"
-            disabled={isEdit}
           >
             <option value="">Select account…</option>
             {accounts.map((a) => (
@@ -223,8 +269,29 @@ export default function RecurringForm() {
           </select>
         </label>
 
+        {transactionType === 'transfer' && (
+          <label className="mb-4 block">
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+              Target Account
+            </span>
+            <select
+              value={transferAccountId}
+              onChange={(e) => setTransferAccountId(e.target.value ? Number(e.target.value) : '')}
+              className="input-cyber w-full rounded-lg px-3 py-2 text-xs [color-scheme:dark]"
+            >
+              <option value="">Select account…</option>
+              {accounts
+                .filter((a) => a.id !== accountId)
+                .map((a) => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+            </select>
+          </label>
+        )}
+
         {/* Category / Subcategory */}
-        <div className="mb-4 grid grid-cols-2 gap-2">
+        {transactionType === 'standard' && (
+          <div className="mb-4 grid grid-cols-2 gap-2">
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
               Category
@@ -259,7 +326,8 @@ export default function RecurringForm() {
               ))}
             </select>
           </label>
-        </div>
+          </div>
+        )}
 
         {/* Frequency */}
         <label className="mb-4 block">

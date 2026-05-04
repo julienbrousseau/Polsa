@@ -383,16 +383,22 @@ This ensures sync is **idempotent** — scanning the same QR twice won't create 
 {
   "name": "Polsa Companion",
   "short_name": "Polsa",
-  "start_url": "/",
+  "start_url": "./#/",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#0b0f1a",
   "theme_color": "#3b82f6",
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
   ]
 }
 ```
+
+### Routing for static hosting
+
+- Use hash routing (`/#/…`) in the companion app so deep links and app launch work correctly on static hosts such as GitHub Pages.
+- Keep asset URLs and PWA manifest URLs relative (`./` and `icons/...`) so installs work under project subpaths (for example `https://<user>.github.io/Polsa/`).
 
 ### Service worker
 
@@ -402,14 +408,23 @@ This ensures sync is **idempotent** — scanning the same QR twice won't create 
 
 ### How to install
 
-The companion PWA is served from the desktop app:
+Recommended bootstrap is an HTTPS-hosted build (GitHub Pages/Netlify), then local desktop sync for data:
+
+1. Open the hosted HTTPS URL on the phone (for example the GitHub Pages deployment URL).
+2. Install to home screen from the browser menu/share sheet.
+3. Launch the installed app once while online so service worker + assets are cached.
+4. Verify offline mode by enabling airplane mode and reopening the app.
+
+Then use desktop local sync (same WiFi) for data exchange:
 
 1. Desktop starts a local HTTP server (same infrastructure as network sync).
-2. Mobile navigates to the local URL.
-3. Browser prompts "Add to Home Screen".
-4. After installation, the PWA works fully offline — the server can be stopped.
+2. Mobile opens that local URL for sync.
+3. Server can be stopped after sync completes.
 
-Alternatively, the PWA can be hosted on a simple static file server (GitHub Pages, Netlify) for easier initial installation, then operates offline.
+Why this order:
+
+- iOS/Android install behavior is most reliable when the initial install comes from HTTPS.
+- Local HTTP remains ideal for private, no-cloud desktop sync, but should not be the only installation path.
 
 ---
 

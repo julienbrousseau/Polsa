@@ -1,6 +1,6 @@
 {
   "name": "polsa-companion",
-  "version": "0.1.7",
+  "version": "0.1.12",
   "description": "Polsa companion mobile app — capture transactions on the go",
   "private": true,
   "type": "module",

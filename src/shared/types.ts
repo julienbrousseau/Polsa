@@ -8,6 +8,7 @@ export interface Account {
   type: AccountType;
   startingBalance: number;  // cents
   currentBalance: number;   // cents — computed, not stored
+  isClosed: boolean;
 }
 
 export interface Category {
@@ -75,6 +76,10 @@ export interface UpdateAccountInput {
   startingBalance: number;
 }
 
+export interface CloseAccountInput {
+  id: number;
+}
+
 export interface TransactionListInput {
   accountId: number;
   offset: number;
@@ -120,6 +125,8 @@ export interface UpdateTransactionInput {
 export interface CategoryTransactionInput {
   categoryId?: number;
   subcategoryId?: number;
+  dateFrom?: string;
+  dateTo?: string;
   offset: number;
   limit: number;
 }
@@ -190,11 +197,15 @@ export interface QifExportResult {
 // Recurring transactions
 
 export type RecurrenceFrequency = 'daily' | 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'yearly';
+export type RecurringTransactionType = 'standard' | 'transfer';
 
 export interface RecurringTransaction {
   id: number;
   accountId: number;
   accountName: string;
+  transactionType: RecurringTransactionType;
+  transferAccountId: number | null;
+  transferAccountName: string | null;
   description: string;
   amount: number;
   subcategoryId: number | null;
@@ -207,6 +218,8 @@ export interface RecurringTransaction {
 
 export interface CreateRecurringInput {
   accountId: number;
+  transactionType?: RecurringTransactionType;
+  transferAccountId?: number;
   description: string;
   amount: number;
   subcategoryId?: number;
@@ -216,6 +229,9 @@ export interface CreateRecurringInput {
 
 export interface UpdateRecurringInput {
   id: number;
+  accountId?: number;
+  transactionType?: RecurringTransactionType;
+  transferAccountId?: number | null;
   description?: string;
   amount?: number;
   subcategoryId?: number | null;
@@ -311,4 +327,27 @@ export interface BudgetDefault {
   categoryId: number;
   amount: number;
   effectiveFrom: string;
+}
+
+// Insights
+
+export interface InsightsMonthInput {
+  year: number;
+  month: number;
+}
+
+export interface InsightsCategoryAmount {
+  categoryId: number;
+  categoryName: string;
+  amount: number;
+}
+
+export interface InsightsMonth {
+  year: number;
+  month: number;
+  totalEarned: number;
+  totalSpent: number;
+  balance: number;
+  expenseCategories: InsightsCategoryAmount[];
+  incomeCategories: InsightsCategoryAmount[];
 }

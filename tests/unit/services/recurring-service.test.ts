@@ -204,6 +204,72 @@ describe('recurring-service', () => {
       expect(updated.nextDate).toBe('2026-05-15');
     });
 
+    it('updates account', () => {
+      const sourceAccountId = seedAccount(testDb, 'Current');
+      const targetAccountId = seedAccount(testDb, 'Savings');
+      const rec = createRecurring({
+        accountId: sourceAccountId,
+        description: 'Move payment',
+        amount: -2500,
+        frequency: 'monthly',
+        nextDate: '2026-05-10',
+      });
+
+      const updated = updateRecurring({
+        id: rec.id,
+        accountId: targetAccountId,
+      });
+
+      expect(updated.accountId).toBe(targetAccountId);
+      expect(updated.accountName).toBe('Savings');
+    });
+
+    it('creates recurring transfer', () => {
+      const sourceAccountId = seedAccount(testDb, 'Current');
+      const targetAccountId = seedAccount(testDb, 'Savings');
+
+      const rec = createRecurring({
+        accountId: sourceAccountId,
+        transactionType: 'transfer',
+        transferAccountId: targetAccountId,
+        description: 'Monthly transfer',
+        amount: 50000,
+        frequency: 'monthly',
+        nextDate: '2026-05-01',
+      });
+
+      expect(rec.transactionType).toBe('transfer');
+      expect(rec.transferAccountId).toBe(targetAccountId);
+      expect(rec.transferAccountName).toBe('Savings');
+      expect(rec.subcategoryId).toBeNull();
+    });
+
+    it('switches recurring payment to transfer on update', () => {
+      const sourceAccountId = seedAccount(testDb, 'Current');
+      const targetAccountId = seedAccount(testDb, 'Savings');
+      const { subcategoryId } = seedCategory(testDb);
+
+      const rec = createRecurring({
+        accountId: sourceAccountId,
+        description: 'Move to savings',
+        amount: -25000,
+        subcategoryId,
+        frequency: 'monthly',
+        nextDate: '2026-05-01',
+      });
+
+      const updated = updateRecurring({
+        id: rec.id,
+        transactionType: 'transfer',
+        transferAccountId: targetAccountId,
+        amount: 25000,
+      });
+
+      expect(updated.transactionType).toBe('transfer');
+      expect(updated.transferAccountId).toBe(targetAccountId);
+      expect(updated.subcategoryId).toBeNull();
+    });
+
     it('cancels and reactivates', () => {
       const acctId = seedAccount(testDb);
       const rec = createRecurring({
@@ -259,6 +325,49 @@ describe('recurring-service', () => {
         frequency: 'biweekly' as any,
         nextDate: '2026-05-01',
       })).toThrow('Invalid frequency');
+    });
+
+    it('rejects invalid account on update', () => {
+      const acctId = seedAccount(testDb);
+      const rec = createRecurring({
+        accountId: acctId,
+        description: 'test',
+        amount: -100,
+        frequency: 'monthly',
+        nextDate: '2026-05-01',
+      });
+
+      expect(() => updateRecurring({
+        id: rec.id,
+        accountId: 999,
+      })).toThrow('not found');
+    });
+
+    it('rejects transfer with same source and destination account', () => {
+      const acctId = seedAccount(testDb);
+      expect(() => createRecurring({
+        accountId: acctId,
+        transactionType: 'transfer',
+        transferAccountId: acctId,
+        description: 'Invalid transfer',
+        amount: 100,
+        frequency: 'monthly',
+        nextDate: '2026-05-01',
+      })).toThrow('Source and destination accounts must be different');
+    });
+
+    it('rejects transfer with non-positive amount', () => {
+      const sourceAccountId = seedAccount(testDb, 'Current');
+      const targetAccountId = seedAccount(testDb, 'Savings');
+      expect(() => createRecurring({
+        accountId: sourceAccountId,
+        transactionType: 'transfer',
+        transferAccountId: targetAccountId,
+        description: 'Invalid transfer',
+        amount: 0,
+        frequency: 'monthly',
+        nextDate: '2026-05-01',
+      })).toThrow('Transfer amount must be greater than zero');
     });
 
     it('rejects invalid date', () => {
@@ -415,6 +524,46 @@ describe('recurring-service', () => {
 
       const txs = testDb.prepare('SELECT * FROM transactions ORDER BY date').all();
       expect(txs).toHaveLength(2);
+    });
+
+    it('applies overdue recurring transfer as paired transfer transactions', () => {
+      const sourceAccountId = seedAccount(testDb, 'Current');
+      const targetAccountId = seedAccount(testDb, 'Savings');
+
+      createRecurring({
+        accountId: sourceAccountId,
+        transactionType: 'transfer',
+        transferAccountId: targetAccountId,
+        description: 'Move to savings',
+        amount: 15000,
+        frequency: 'monthly',
+        nextDate: '2026-04-01',
+      });
+
+      const result = applyOverdue('2026-04-20');
+      expect(result.applied).toBe(1);
+
+      const txs = testDb.prepare(`
+        SELECT account_id, amount, transaction_type, transfer_account_id, transfer_group_id, subcategory_id
+        FROM transactions
+        ORDER BY id
+      `).all() as any[];
+
+      expect(txs).toHaveLength(2);
+      expect(txs[0].account_id).toBe(sourceAccountId);
+      expect(txs[0].amount).toBe(-15000);
+      expect(txs[0].transaction_type).toBe('transfer');
+      expect(txs[0].transfer_account_id).toBe(targetAccountId);
+      expect(txs[0].subcategory_id).toBeNull();
+
+      expect(txs[1].account_id).toBe(targetAccountId);
+      expect(txs[1].amount).toBe(15000);
+      expect(txs[1].transaction_type).toBe('transfer');
+      expect(txs[1].transfer_account_id).toBe(sourceAccountId);
+      expect(txs[1].subcategory_id).toBeNull();
+
+      expect(txs[0].transfer_group_id).toBeTruthy();
+      expect(txs[0].transfer_group_id).toBe(txs[1].transfer_group_id);
     });
 
     it('preserves subcategory on applied transactions', () => {

@@ -7,10 +7,13 @@ export interface PolsaAPI {
   // Accounts
   accounts: {
     list: () => Promise<any[]>;
+    listOpen: () => Promise<any[]>;
     get: (id: number) => Promise<any>;
     create: (input: any) => Promise<any>;
     update: (input: any) => Promise<any>;
     delete: (id: number) => Promise<void>;
+    close: (id: number) => Promise<any>;
+    reopen: (id: number) => Promise<any>;
   };
   // Transactions
   transactions: {
@@ -83,15 +86,22 @@ export interface PolsaAPI {
     startCompanion: () => Promise<{ url: string; port: number } | null>;
     stopCompanion: () => Promise<void>;
   };
+  // Insights
+  insights: {
+    month: (input: any) => Promise<any>;
+  };
 }
 
 const api: PolsaAPI = {
   accounts: {
     list: () => ipcRenderer.invoke('accounts:list'),
+    listOpen: () => ipcRenderer.invoke('accounts:listOpen'),
     get: (id) => ipcRenderer.invoke('accounts:get', id),
     create: (input) => ipcRenderer.invoke('accounts:create', input),
     update: (input) => ipcRenderer.invoke('accounts:update', input),
     delete: (id) => ipcRenderer.invoke('accounts:delete', id),
+    close: (id) => ipcRenderer.invoke('accounts:close', id),
+    reopen: (id) => ipcRenderer.invoke('accounts:reopen', id),
   },
   transactions: {
     list: (input) => ipcRenderer.invoke('transactions:list', input),
@@ -155,6 +165,9 @@ const api: PolsaAPI = {
     stopServer: () => ipcRenderer.invoke('sync:stopServer'),
     startCompanion: () => ipcRenderer.invoke('sync:startCompanion'),
     stopCompanion: () => ipcRenderer.invoke('sync:stopCompanion'),
+  },
+  insights: {
+    month: (input) => ipcRenderer.invoke('insights:month', input),
   },
 };
 

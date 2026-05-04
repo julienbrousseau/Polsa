@@ -12,6 +12,7 @@ import { registerRecurringHandlers } from './ipc/recurring';
 import { registerReconcileHandlers } from './ipc/reconcile';
 import { registerBudgetHandlers } from './ipc/budgets';
 import { registerSyncHandlers } from './ipc/sync';
+import { registerInsightsHandlers } from './ipc/insights';
 import { applyOverdue } from './services/recurring-service';
 
 let mainWindow: BrowserWindow | null = null;
@@ -110,6 +111,7 @@ app.whenReady().then(() => {
     registerReconcileHandlers();
     registerBudgetHandlers();
     registerSyncHandlers();
+    registerInsightsHandlers();
 
     // Apply overdue recurring payments before showing UI
     const { applied } = applyOverdue();

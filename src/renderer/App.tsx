@@ -13,6 +13,8 @@ import Reconcile from './pages/Reconcile';
 import BudgetOverview from './pages/BudgetOverview';
 import BudgetSetup from './pages/BudgetSetup';
 import MobileSync from './pages/MobileSync';
+import ClosedAccounts from './pages/ClosedAccounts';
+import Insights from './pages/Insights';
 
 export default function App() {
   return (
@@ -32,7 +34,9 @@ export default function App() {
         <Route path="/reconcile" element={<Reconcile />} />
         <Route path="/budgets" element={<BudgetOverview />} />
         <Route path="/budgets/setup" element={<BudgetSetup />} />
+        <Route path="/insights" element={<Insights />} />
         <Route path="/sync" element={<MobileSync />} />
+        <Route path="/closed-accounts" element={<ClosedAccounts />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

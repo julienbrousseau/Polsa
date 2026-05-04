@@ -32,7 +32,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const loadAccounts = async () => {
     try {
-      const list = await window.polsa.accounts.list();
+      const list = await window.polsa.accounts.listOpen();
       setAccounts(list);
     } catch {
       // API not available yet (dev without electron)
@@ -324,6 +324,30 @@ export default function Layout({ children }: LayoutProps) {
             )}
           </Link>
 
+          {/* Insights link */}
+          <Link
+            to="/insights"
+            className={`mt-1 flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs transition-all duration-200 ${
+              location.pathname === '/insights'
+                ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent-light)] neon-border'
+                : 'text-[var(--color-text-primary)] hover:bg-[var(--color-accent)]/5 hover:text-[var(--color-accent-light)]'
+            }`}
+            title={collapsed ? 'Insights' : undefined}
+          >
+            {collapsed ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7 12l3-3 2 2 5-5m0 0v4m0-4h-4M5 20h14" />
+              </svg>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 12l3-3 2 2 5-5m0 0v4m0-4h-4M5 20h14" />
+                </svg>
+                <span className="font-medium">Insights</span>
+              </>
+            )}
+          </Link>
+
           {/* Neon separator */}
           <div className="my-4 h-px bg-gradient-to-r from-transparent via-[var(--color-accent)]/20 to-transparent" />
 
@@ -360,6 +384,30 @@ export default function Layout({ children }: LayoutProps) {
             <span className="text-lg leading-none font-light">+</span>
             {!collapsed && <span className="font-medium">New account</span>}
           </button>
+
+          {/* Closed Accounts link */}
+          <Link
+            to="/closed-accounts"
+            className={`mt-1 flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs transition-all duration-200 ${
+              location.pathname === '/closed-accounts'
+                ? 'bg-[var(--color-accent)]/10 text-[var(--color-accent-light)] neon-border'
+                : 'text-[var(--color-text-muted)] hover:bg-[var(--color-accent)]/5 hover:text-[var(--color-accent-light)]'
+            }`}
+            title={collapsed ? 'Closed accounts' : undefined}
+          >
+            {collapsed ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                <span className="font-medium">Closed accounts</span>
+              </>
+            )}
+          </Link>
         </div>
       </aside>
 

@@ -1,6 +1,7 @@
 // src/main/services/recurring-service.ts
 
 import { getDb } from '../database';
+import { randomUUID } from 'crypto';
 import type {
   RecurringTransaction,
   CreateRecurringInput,
@@ -66,6 +67,9 @@ function mapRow(r: any): RecurringTransaction {
     id: r.id,
     accountId: r.account_id,
     accountName: r.account_name ?? '',
+    transactionType: r.transaction_type,
+    transferAccountId: r.transfer_account_id ?? null,
+    transferAccountName: r.transfer_account_name ?? null,
     description: r.description,
     amount: r.amount,
     subcategoryId: r.subcategory_id,
@@ -79,11 +83,13 @@ function mapRow(r: any): RecurringTransaction {
 
 const SELECT_RECURRING = `
   SELECT rt.*, a.name AS account_name,
-         s.name AS subcategory_name, c.name AS category_name
+         s.name AS subcategory_name, c.name AS category_name,
+         ta.name AS transfer_account_name
   FROM recurring_transactions rt
   JOIN accounts a ON a.id = rt.account_id
   LEFT JOIN subcategories s ON s.id = rt.subcategory_id
   LEFT JOIN categories c ON c.id = s.category_id
+  LEFT JOIN accounts ta ON ta.id = rt.transfer_account_id
 `;
 
 export function listRecurring(): RecurringTransaction[] {
@@ -108,6 +114,10 @@ export function createRecurring(input: CreateRecurringInput): RecurringTransacti
   if (dateErr) throw new Error(dateErr);
   if (!isValidFrequency(input.frequency)) throw new Error('Invalid frequency');
   if (typeof input.description !== 'string') throw new Error('Description is required');
+  const transactionType = input.transactionType ?? 'standard';
+  if (transactionType !== 'standard' && transactionType !== 'transfer') {
+    throw new Error('Invalid recurring transaction type');
+  }
 
   const db = getDb();
 
@@ -115,21 +125,42 @@ export function createRecurring(input: CreateRecurringInput): RecurringTransacti
   const acct = db.prepare('SELECT id FROM accounts WHERE id = ?').get(input.accountId);
   if (!acct) throw new Error(`Account ${input.accountId} not found`);
 
+  let transferAccountId: number | null = null;
+  if (transactionType === 'transfer') {
+    if (input.amount <= 0) {
+      throw new Error('Transfer amount must be greater than zero');
+    }
+    if (!isValidInteger(input.transferAccountId)) {
+      throw new Error('Transfer target account is required');
+    }
+    if (input.transferAccountId === input.accountId) {
+      throw new Error('Source and destination accounts must be different');
+    }
+    const transferAcct = db.prepare('SELECT id FROM accounts WHERE id = ?').get(input.transferAccountId);
+    if (!transferAcct) throw new Error(`Account ${input.transferAccountId} not found`);
+    transferAccountId = input.transferAccountId;
+  }
+
   // Verify subcategory if provided
-  if (input.subcategoryId != null) {
+  if (transactionType === 'standard' && input.subcategoryId != null) {
     if (!isValidInteger(input.subcategoryId)) throw new Error('Invalid subcategory ID');
     const sub = db.prepare('SELECT id FROM subcategories WHERE id = ?').get(input.subcategoryId);
     if (!sub) throw new Error(`Subcategory ${input.subcategoryId} not found`);
   }
 
   const result = db.prepare(`
-    INSERT INTO recurring_transactions (account_id, description, amount, subcategory_id, frequency, next_date)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO recurring_transactions (
+      account_id, transaction_type, transfer_account_id,
+      description, amount, subcategory_id, frequency, next_date
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     input.accountId,
+    transactionType,
+    transferAccountId,
     input.description.trim(),
     input.amount,
-    input.subcategoryId ?? null,
+    transactionType === 'transfer' ? null : (input.subcategoryId ?? null),
     input.frequency,
     input.nextDate,
   );
@@ -144,11 +175,20 @@ export function updateRecurring(input: UpdateRecurringInput): RecurringTransacti
   const existing = db.prepare('SELECT * FROM recurring_transactions WHERE id = ?').get(input.id) as any;
   if (!existing) throw new Error(`Recurring transaction ${input.id} not found`);
 
+  const accountId = input.accountId !== undefined ? input.accountId : existing.account_id;
+  const transactionType = input.transactionType !== undefined ? input.transactionType : existing.transaction_type;
+  const transferAccountId = input.transferAccountId !== undefined ? input.transferAccountId : existing.transfer_account_id;
   const description = input.description !== undefined ? input.description.trim() : existing.description;
   const amount = input.amount !== undefined ? input.amount : existing.amount;
   const subcategoryId = input.subcategoryId !== undefined ? input.subcategoryId : existing.subcategory_id;
   const frequency = input.frequency !== undefined ? input.frequency : existing.frequency;
   const nextDate = input.nextDate !== undefined ? input.nextDate : existing.next_date;
+
+  if (input.accountId !== undefined) {
+    if (!isValidInteger(input.accountId)) throw new Error('Invalid account ID');
+    const acct = db.prepare('SELECT id FROM accounts WHERE id = ?').get(input.accountId);
+    if (!acct) throw new Error(`Account ${input.accountId} not found`);
+  }
 
   if (input.amount !== undefined) {
     const amtErr = validateTransactionAmount(input.amount);
@@ -161,7 +201,25 @@ export function updateRecurring(input: UpdateRecurringInput): RecurringTransacti
   if (input.frequency !== undefined && !isValidFrequency(input.frequency)) {
     throw new Error('Invalid frequency');
   }
-  if (input.subcategoryId !== undefined && input.subcategoryId !== null) {
+  if (transactionType !== 'standard' && transactionType !== 'transfer') {
+    throw new Error('Invalid recurring transaction type');
+  }
+
+  if (transactionType === 'transfer') {
+    if (amount <= 0) {
+      throw new Error('Transfer amount must be greater than zero');
+    }
+    if (!isValidInteger(transferAccountId)) {
+      throw new Error('Transfer target account is required');
+    }
+    if (transferAccountId === accountId) {
+      throw new Error('Source and destination accounts must be different');
+    }
+    const transferAcct = db.prepare('SELECT id FROM accounts WHERE id = ?').get(transferAccountId);
+    if (!transferAcct) throw new Error(`Account ${transferAccountId} not found`);
+  }
+
+  if (transactionType === 'standard' && input.subcategoryId !== undefined && input.subcategoryId !== null) {
     if (!isValidInteger(input.subcategoryId)) throw new Error('Invalid subcategory ID');
     const sub = db.prepare('SELECT id FROM subcategories WHERE id = ?').get(input.subcategoryId);
     if (!sub) throw new Error(`Subcategory ${input.subcategoryId} not found`);
@@ -169,9 +227,19 @@ export function updateRecurring(input: UpdateRecurringInput): RecurringTransacti
 
   db.prepare(`
     UPDATE recurring_transactions
-    SET description = ?, amount = ?, subcategory_id = ?, frequency = ?, next_date = ?
+    SET account_id = ?, transaction_type = ?, transfer_account_id = ?, description = ?, amount = ?, subcategory_id = ?, frequency = ?, next_date = ?
     WHERE id = ?
-  `).run(description, amount, subcategoryId, frequency, nextDate, input.id);
+  `).run(
+    accountId,
+    transactionType,
+    transactionType === 'transfer' ? transferAccountId : null,
+    description,
+    amount,
+    transactionType === 'transfer' ? null : subcategoryId,
+    frequency,
+    nextDate,
+    input.id,
+  );
 
   return getRecurring(input.id);
 }
@@ -215,6 +283,13 @@ export function applyOverdue(today?: string): { applied: number } {
       INSERT INTO transactions (account_id, date, amount, category_id, subcategory_id, description)
       VALUES (?, ?, ?, NULL, ?, ?)
     `);
+    const insertTransferTx = db.prepare(`
+      INSERT INTO transactions (
+        account_id, date, amount, transaction_type, transfer_account_id, transfer_group_id,
+        category_id, subcategory_id, description
+      )
+      VALUES (?, ?, ?, 'transfer', ?, ?, NULL, NULL, ?)
+    `);
     const updateNext = db.prepare(`
       UPDATE recurring_transactions SET next_date = ? WHERE id = ?
     `);
@@ -222,7 +297,31 @@ export function applyOverdue(today?: string): { applied: number } {
     for (const row of rows) {
       let nextDate = row.next_date;
       while (nextDate <= todayStr) {
-        insertTx.run(row.account_id, nextDate, row.amount, row.subcategory_id, row.description);
+        if (row.transaction_type === 'transfer') {
+          if (!row.transfer_account_id) {
+            throw new Error(`Recurring transfer ${row.id} is missing a destination account`);
+          }
+          const transferAmount = Math.abs(row.amount);
+          const transferGroupId = randomUUID();
+          insertTransferTx.run(
+            row.account_id,
+            nextDate,
+            -transferAmount,
+            row.transfer_account_id,
+            transferGroupId,
+            row.description,
+          );
+          insertTransferTx.run(
+            row.transfer_account_id,
+            nextDate,
+            transferAmount,
+            row.account_id,
+            transferGroupId,
+            row.description,
+          );
+        } else {
+          insertTx.run(row.account_id, nextDate, row.amount, row.subcategory_id, row.description);
+        }
         applied++;
         nextDate = advanceDate(nextDate, row.frequency);
       }

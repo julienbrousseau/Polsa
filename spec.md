@@ -56,6 +56,11 @@ I want to be able to set up budget allocation per category or sub-category. This
 
 The budget screen should allow me to see the total amount allocated for the current month. Each month should repeat by default the previous month's allocated values, but I should be able to overwrite them occasionally. If that happens I should be asked if I want to just update the allocation for this month, or if all subsequent months should also use the new value.
 
+### Closed accounts
+
+DONE
+To import closed accounts, I need to be able to reclose them
+
 ### Stats and reporting
 
 TODO

@@ -28,9 +28,31 @@ function NetWorthBar({ accounts }: { accounts: Account[] }) {
   const totalNeg   = negAccounts.reduce((s, a) => s + Math.abs(a.currentBalance), 0);
   const totalRange = totalPos + totalNeg;
   const liquidNet  = totalPos - totalNeg;
+  const scaleTickStep = 1_000 * 100;
+  const scaleLabelStep = 10_000 * 100;
 
   // Zero line is always rendered; its % position = negative share of total range
   const zeroLinePct = totalRange > 0 ? (totalNeg / totalRange) * 100 : 0;
+
+  const liquidScaleTicks: { value: number; pct: number; label: string | null }[] = [];
+  if (totalRange > 0) {
+    const minValue = -totalNeg;
+    const maxValue = totalPos;
+    const startTick = Math.ceil(minValue / scaleTickStep) * scaleTickStep;
+    const endTick = Math.floor(maxValue / scaleTickStep) * scaleTickStep;
+
+    for (let value = startTick; value <= endTick; value += scaleTickStep) {
+      if (value === 0) continue;
+      const pct = ((value + totalNeg) / totalRange) * 100;
+      const isLabelTick = value % scaleLabelStep === 0;
+      const whole = Math.abs(value / 100);
+      liquidScaleTicks.push({
+        value,
+        pct,
+        label: isLabelTick ? `${value < 0 ? '-' : ''}£${whole.toLocaleString('en-GB')}` : null,
+      });
+    }
+  }
 
   const hasAnyLiquid   = liquidAccounts.length > 0;
   const hasInvestments = investmentAccounts.length > 0;
@@ -57,45 +79,71 @@ function NetWorthBar({ accounts }: { accounts: Account[] }) {
           </div>
 
           {/* Stacked bar – negatives left of zero, positives right */}
-          <div className="relative h-3">
-            {/* Track */}
-            <div className="absolute inset-0 rounded-full bg-white/5" />
+          <div className="relative h-7">
+            {/* Stacked bar track and fills */}
+            <div className="absolute left-0 right-0 top-1/2 h-3 -translate-y-1/2">
+              {/* Track */}
+              <div className="absolute inset-0 rounded-full bg-white/5" />
 
-            {/* Coloured account segments */}
-            <div className="absolute inset-0 rounded-full overflow-hidden flex">
-              {negAccounts.map(acc => (
-                <div
-                  key={acc.id}
-                  style={{
-                    flex: Math.abs(acc.currentBalance),
-                    backgroundColor: TYPE_COLOR[acc.type],
-                    opacity: 0.4,
-                  }}
-                />
-              ))}
-              {posAccounts.map(acc => (
-                <div
-                  key={acc.id}
-                  style={{
-                    flex: acc.currentBalance,
-                    backgroundColor: TYPE_COLOR[acc.type],
-                    boxShadow: `inset 0 0 12px ${TYPE_COLOR[acc.type]}55`,
-                  }}
-                />
-              ))}
+              {/* Coloured account segments */}
+              <div className="absolute inset-0 rounded-full overflow-hidden flex">
+                {negAccounts.map(acc => (
+                  <div
+                    key={acc.id}
+                    style={{
+                      flex: Math.abs(acc.currentBalance),
+                      backgroundColor: TYPE_COLOR[acc.type],
+                      opacity: 0.4,
+                    }}
+                  />
+                ))}
+                {posAccounts.map(acc => (
+                  <div
+                    key={acc.id}
+                    style={{
+                      flex: acc.currentBalance,
+                      backgroundColor: TYPE_COLOR[acc.type],
+                      boxShadow: `inset 0 0 12px ${TYPE_COLOR[acc.type]}55`,
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* Zero line — always visible */}
+              <div
+                className="absolute inset-y-0 z-10"
+                style={{
+                  left: `${zeroLinePct}%`,
+                  width: '2px',
+                  marginLeft: '-1px',
+                  background: 'rgba(255,255,255,0.65)',
+                  boxShadow: '0 0 6px rgba(255,255,255,0.9), 0 0 2px rgba(255,255,255,1)',
+                }}
+              />
             </div>
 
-            {/* Zero line — always visible */}
-            <div
-              className="absolute inset-y-0 z-10"
-              style={{
-                left: `${zeroLinePct}%`,
-                width: '2px',
-                marginLeft: '-1px',
-                background: 'rgba(255,255,255,0.65)',
-                boxShadow: '0 0 6px rgba(255,255,255,0.9), 0 0 2px rgba(255,255,255,1)',
-              }}
-            />
+            {/* Subtle value ticks every £1,000; labels every £10,000 */}
+            {liquidScaleTicks.map(tick => (
+              <div
+                key={tick.value}
+                className="absolute inset-y-0 z-20 pointer-events-none"
+                style={{ left: `${tick.pct}%` }}
+              >
+                <div
+                  className={`absolute left-1/2 -translate-x-1/2 ${tick.label ? 'h-2 bg-white/30' : 'h-1.5 bg-white/18'}`}
+                  style={{
+                    top: '50%',
+                    width: '1px',
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                />
+                {tick.label && (
+                  <span className="absolute left-1/2 top-full mt-0.5 -translate-x-1/2 text-[9px] font-mono tabular-nums text-white/35 whitespace-nowrap">
+                    {tick.label}
+                  </span>
+                )}
+              </div>
+            ))}
           </div>
 
           {/* Per-account legend */}

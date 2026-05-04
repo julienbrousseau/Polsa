@@ -1,5 +1,3 @@
-// src/main/services/account-service.ts
-
 import { getDb } from '../database';
 import type { Account, CreateAccountInput, UpdateAccountInput } from '../../shared/types';
 import { validateAccountName, isValidAccountType, isValidInteger } from '../../shared/validation';
@@ -7,13 +5,13 @@ import { validateAccountName, isValidAccountType, isValidInteger } from '../../s
 export function listAccounts(): Account[] {
   const db = getDb();
   const rows = db.prepare(`
-    SELECT a.id, a.name, a.type, a.starting_balance,
+    SELECT a.id, a.name, a.type, a.starting_balance, a.is_closed,
            a.starting_balance + COALESCE(SUM(t.amount), 0) AS current_balance
     FROM accounts a
     LEFT JOIN transactions t ON t.account_id = a.id
     GROUP BY a.id
     ORDER BY a.name COLLATE NOCASE
-  `).all() as Array<{ id: number; name: string; type: string; starting_balance: number; current_balance: number }>;
+  `).all() as Array<{ id: number; name: string; type: string; starting_balance: number; current_balance: number; is_closed: number }>;
 
   return rows.map((r) => ({
     id: r.id,
@@ -21,19 +19,42 @@ export function listAccounts(): Account[] {
     type: r.type as Account['type'],
     startingBalance: r.starting_balance,
     currentBalance: r.current_balance,
+    isClosed: r.is_closed === 1,
+  }));
+}
+
+export function listOpenAccounts(): Account[] {
+  const db = getDb();
+  const rows = db.prepare(`
+    SELECT a.id, a.name, a.type, a.starting_balance, a.is_closed,
+           a.starting_balance + COALESCE(SUM(t.amount), 0) AS current_balance
+    FROM accounts a
+    LEFT JOIN transactions t ON t.account_id = a.id
+    WHERE a.is_closed = 0
+    GROUP BY a.id
+    ORDER BY a.name COLLATE NOCASE
+  `).all() as Array<{ id: number; name: string; type: string; starting_balance: number; current_balance: number; is_closed: number }>;
+
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    type: r.type as Account['type'],
+    startingBalance: r.starting_balance,
+    currentBalance: r.current_balance,
+    isClosed: false,
   }));
 }
 
 export function getAccount(id: number): Account {
   const db = getDb();
   const row = db.prepare(`
-    SELECT a.id, a.name, a.type, a.starting_balance,
+    SELECT a.id, a.name, a.type, a.starting_balance, a.is_closed,
            a.starting_balance + COALESCE(SUM(t.amount), 0) AS current_balance
     FROM accounts a
     LEFT JOIN transactions t ON t.account_id = a.id
     WHERE a.id = ?
     GROUP BY a.id
-  `).get(id) as { id: number; name: string; type: string; starting_balance: number; current_balance: number } | undefined;
+  `).get(id) as { id: number; name: string; type: string; starting_balance: number; current_balance: number; is_closed: number } | undefined;
 
   if (!row) {
     throw new Error(`Account ${id} not found`);
@@ -45,6 +66,7 @@ export function getAccount(id: number): Account {
     type: row.type as Account['type'],
     startingBalance: row.starting_balance,
     currentBalance: row.current_balance,
+    isClosed: row.is_closed === 1,
   };
 }
 
@@ -90,4 +112,30 @@ export function deleteAccount(id: number): void {
   if (changes.changes === 0) {
     throw new Error(`Account ${id} not found`);
   }
+}
+
+export function closeAccount(id: number): Account {
+  if (!isValidInteger(id)) throw new Error('Invalid account ID');
+
+  const db = getDb();
+  const changes = db.prepare('UPDATE accounts SET is_closed = 1 WHERE id = ?').run(id);
+
+  if (changes.changes === 0) {
+    throw new Error(`Account ${id} not found`);
+  }
+
+  return getAccount(id);
+}
+
+export function reopenAccount(id: number): Account {
+  if (!isValidInteger(id)) throw new Error('Invalid account ID');
+
+  const db = getDb();
+  const changes = db.prepare('UPDATE accounts SET is_closed = 0 WHERE id = ?').run(id);
+
+  if (changes.changes === 0) {
+    throw new Error(`Account ${id} not found`);
+  }
+
+  return getAccount(id);
 }

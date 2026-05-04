@@ -108,25 +108,38 @@ export default function RecurringList() {
                           <span className="text-xs font-semibold text-[var(--color-text-primary)] truncate">
                             {r.description || '(no description)'}
                           </span>
+                          {r.transactionType === 'transfer' && (
+                            <span className="rounded-full border border-[var(--color-accent)]/35 bg-[var(--color-accent)]/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--color-accent-light)]">
+                              Transfer
+                            </span>
+                          )}
                           <span className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider">
                             {FREQ_LABELS[r.frequency] || r.frequency}
                           </span>
-                          <span
-                            className={`text-xs font-mono tabular-nums ${
-                              r.amount >= 0
-                                ? 'text-[var(--color-positive)]'
-                                : 'text-[var(--color-negative)]'
-                            }`}
-                          >
-                            {r.amount >= 0 ? '+' : ''}{formatMoney(r.amount)}
-                          </span>
+                          {r.transactionType === 'transfer' ? (
+                            <span className="text-xs font-mono tabular-nums text-[var(--color-accent-light)]">
+                              {formatMoney(Math.abs(r.amount))}
+                            </span>
+                          ) : (
+                            <span
+                              className={`text-xs font-mono tabular-nums ${
+                                r.amount >= 0
+                                  ? 'text-[var(--color-positive)]'
+                                  : 'text-[var(--color-negative)]'
+                              }`}
+                            >
+                              {r.amount >= 0 ? '+' : ''}{formatMoney(r.amount)}
+                            </span>
+                          )}
                           <span className="text-[10px] text-[var(--color-text-muted)]">
-                            → {r.accountName}
+                            {r.transactionType === 'transfer'
+                              ? `${r.accountName} → ${r.transferAccountName ?? 'Unknown account'}`
+                              : `→ ${r.accountName}`}
                           </span>
                         </div>
                         <div className="mt-1 text-[10px] text-[var(--color-text-muted)]">
                           Next: {formatDate(r.nextDate)}
-                          {r.subcategoryName && (
+                          {r.transactionType === 'standard' && r.subcategoryName && (
                             <span className="ml-3">
                               {r.categoryName && `${r.categoryName} › `}{r.subcategoryName}
                             </span>
@@ -180,20 +193,31 @@ export default function RecurringList() {
                             <span className="text-xs font-semibold text-[var(--color-text-primary)] truncate line-through">
                               {r.description || '(no description)'}
                             </span>
+                            {r.transactionType === 'transfer' && (
+                              <span className="rounded-full border border-[var(--color-accent)]/35 bg-[var(--color-accent)]/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--color-accent-light)]">
+                                Transfer
+                              </span>
+                            )}
                             <span className="text-[10px] text-[var(--color-text-muted)] uppercase tracking-wider">
                               {FREQ_LABELS[r.frequency] || r.frequency}
                             </span>
                             <span
                               className={`text-xs font-mono tabular-nums ${
-                                r.amount >= 0
-                                  ? 'text-[var(--color-positive)]'
-                                  : 'text-[var(--color-negative)]'
+                                r.transactionType === 'transfer'
+                                  ? 'text-[var(--color-accent-light)]'
+                                  : r.amount >= 0
+                                    ? 'text-[var(--color-positive)]'
+                                    : 'text-[var(--color-negative)]'
                               }`}
                             >
-                              {r.amount >= 0 ? '+' : ''}{formatMoney(r.amount)}
+                              {r.transactionType === 'transfer'
+                                ? formatMoney(Math.abs(r.amount))
+                                : `${r.amount >= 0 ? '+' : ''}${formatMoney(r.amount)}`}
                             </span>
                             <span className="text-[10px] text-[var(--color-text-muted)]">
-                              → {r.accountName}
+                                {r.transactionType === 'transfer'
+                                  ? `${r.accountName} → ${r.transferAccountName ?? 'Unknown account'}`
+                                  : `→ ${r.accountName}`}
                             </span>
                           </div>
                           <div className="mt-1 text-[10px] text-[var(--color-text-muted)]">
